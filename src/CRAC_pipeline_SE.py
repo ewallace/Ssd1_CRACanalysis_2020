@@ -1,7 +1,7 @@
 #!/usr/bin/python
 __author__		= "Sander Granneman"
 __copyright__	= "Copyright 2018"
-__version__		= "0.5.0"
+__version__		= "0.5.1e"
 __credits__		= ["Sander Granneman"]
 __email__		= "sgrannem@staffmail.ed.ac.uk"
 __status__		= "beta"
