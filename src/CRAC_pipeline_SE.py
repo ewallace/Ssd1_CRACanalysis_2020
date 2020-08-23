@@ -42,10 +42,11 @@ def getFileBaseName(filename):
 	return os.path.splitext(os.path.basename(filename))[0]
 
 def getBarcodeInfo(barcodefile):
+    """ gets barcode info from barcodefile, outputs a list of fastq filenames to use as demultiplexed outputs """
 	return ["%s.fastq" % "_".join(line.strip().split()) for line in open(barcodefile,"r").readlines()]
 	
 def runFlexBar(inputfile,outputfile):
-	""" runs Flexbar on the data to remove the adapter sequence from the forward reads """
+	""" runs Flexbar on inputfile to remove the adapter sequence from the forward reads """
 	outputfilename = "%s/%s_trimmed" % (os.path.join(root_dir,"flexbar_trimmed"),re.search("^.+/([^/]+).(san)?fastq(.gz)?",inputfile).group(1))
 	if args.adapter:
 		cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -a '%s' -qt 30" % (inputfile,outputfilename,args.adapter)

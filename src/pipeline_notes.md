@@ -47,3 +47,15 @@ TO DO: Find these files.
 - `Saccharomyces_cerevisiae.EF4.74.dna.toplevel.shortChrNames.lengths`
 - `Saccharomyces_cerevisiae.EF4.74_SGDv64_CUTandSUT_withUTRs_noEstimates_antisense_intergenic_4xlncRNAs_final.pyCheckGTFfile.output.gtf`
 - `Saccharomyces_cerevisiae.EF4.74.dna.toplevel.shortChrNames.novoindex`
+
+## Small test
+
+Test run on initial 100000 records:
+
+```
+test_pipeline_flexbar_SE.py \
+  -f /homes/ewallac2/mount/datastore/wallace_rna/bigdata/2019/Ssd1CRAC-2019-01-15/20190114_Ssd1_CRAC_init100000.fastq \
+  -p 8 \
+  --name test_pipeline_flexbar_SE_init100000 \
+  -a input/3primeadapter.fasta 
+```
