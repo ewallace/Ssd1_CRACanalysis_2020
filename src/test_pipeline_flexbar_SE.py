@@ -44,6 +44,36 @@ def runFlexBar(inputfile,outputfile):
 
 ### start of pipeline
 
+# setting the main working directory
+home_dir = os.getcwd()
+root_dir = "%s/%s" % (home_dir,args.name)
+try:
+	os.mkdir(root_dir)
+except OSError:
+	pass
+
+### setting up logging
+if not args.log_file:
+	logfile = "%s/%s" % (root_dir,"log_file.txt")
+else:
+	logfile = "%s/%s" % (root_dir,args.log_file)
+logger, logger_mutex = cmdline.setup_logging ("ChemModSeqPipeline",logfile,10)
+
+### setting the starting files
+
+startingfiles = [os.path.abspath(i) for i in args.forwardreads]
+
+### checking if the correct pyBarcodeFilter version is installed. Need version 3.0 or higher!
+
+result = subprocess.Popen(['pyBarcodeFilter.py', '--version'], stdout=subprocess.PIPE)
+out,err = result.communicate()
+print float(out)
+if float(out) < 3.0:
+	sys.stderr.write("To run this script you need to have pyBarcodeFilter version 3.0 or later installed. Please install the latest version of pyCRAC\n")
+	exit()	
+
+### start of pipeline
+
 pipeline = Pipeline(name="Single-end data CRAC pipeline")
                 
 
