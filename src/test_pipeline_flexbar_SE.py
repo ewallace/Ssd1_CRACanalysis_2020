@@ -1,10 +1,10 @@
 #!/usr/bin/python
-__author__		= "Sander Granneman"
-__copyright__	= "Copyright 2018"
-__version__		= "0.5.1e"
-__credits__		= ["Sander Granneman","Edward Wallace"]
-__email__		= "sgrannem@staffmail.ed.ac.uk"
-__status__		= "beta"
+__author__      = "Sander Granneman"
+__copyright__   = "Copyright 2018"
+__version__     = "0.5.1e"
+__credits__     = ["Sander Granneman","Edward Wallace"]
+__email__       = "sgrannem@staffmail.ed.ac.uk"
+__status__      = "beta"
 
 from ruffus import *
 from ruffus.cmdline import MESSAGE
@@ -28,37 +28,30 @@ parser.add_argument("-a","--adapter",dest="adapter",help="the path to the file c
 parser.add_argument("-p","--processors",dest="processors",type=int,help="indicate how many processors you want to use for analyses. Default is 8",default=8)
 args = parser.parse_args()
 
-def getFileBaseName(filename):
-	""" removes path and extension from file name """
-	return os.path.splitext(os.path.basename(filename))[0]
 
-def getBarcodeInfo(barcodefile):
-    """ gets barcode info from barcodefile, outputs a list of fastq filenames to use as demultiplexed outputs """
-	return ["%s.fastq" % "_".join(line.strip().split()) for line in open(barcodefile,"r").readlines()]
-	
 def runFlexBar(inputfile,outputfile):
-	""" runs Flexbar on inputfile to remove the adapter sequence from the forward reads """
-	outputfilename = "%s/%s_trimmed" % (os.path.join(root_dir,"flexbar_trimmed"),re.search("^.+/([^/]+).(san)?fastq(.gz)?",inputfile).group(1))
-	if args.adapter:
-		cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -a '%s' -qt 30" % (inputfile,outputfilename,args.adapter)
-	elif args.truseq:
-		cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -aa TruSeq -qt 30" % (inputfile,outputfilename)
-		print cmd
-	else:
-		cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -a '%s' -qt 30" % (inputfile, outputfilename)
-	logger.info(cmd)
-	os.system(cmd)	
+    """ runs Flexbar on inputfile to remove the adapter sequence from the forward reads """
+    outputfilename = "%s/%s_trimmed" % (os.path.join(root_dir,"flexbar_trimmed"),re.search("^.+/([^/]+).(san)?fastq(.gz)?",inputfile).group(1))
+    if args.adapter:
+        cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -a '%s' -qt 30" % (inputfile,outputfilename,args.adapter)
+    elif args.truseq:
+        cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -aa TruSeq -qt 30" % (inputfile,outputfilename)
+        print cmd
+    else:
+        cmd = "flexbar -r '%s' -qf i1.8 -t '%s' -n 10 -ao 7 -a '%s' -qt 30" % (inputfile, outputfilename)
+    logger.info(cmd)
+    os.system(cmd)  
 
 ### start of pipeline
 
 pipeline = Pipeline(name="Single-end data CRAC pipeline")
-				
+                
 
 pipeline.transform(task_func = runFlexBar,
-					input  = startingfiles,
-					filter = formatter("^.+/([^/]+).(san)?fastq$"),						
-					output = "%s/flexbar_trimmed/{1[0]}_trimmed.fastq" % root_dir,
-				).follows(pipeline.mkdir(os.path.join(root_dir,"flexbar_trimmed")))
-				
+                    input  = startingfiles,
+                    filter = formatter("^.+/([^/]+).(san)?fastq$"),                     
+                    output = "%s/flexbar_trimmed/{1[0]}_trimmed.fastq" % root_dir,
+                ).follows(pipeline.mkdir(os.path.join(root_dir,"flexbar_trimmed")))
+                
 
 pipeline_run(multiprocess=args.processors,verbose=5,checksum_level=3)
