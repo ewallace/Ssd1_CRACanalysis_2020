@@ -130,3 +130,6 @@ dmypy.json
 
 # Mac OS X
 .DS_Store
+
+# ruffus pipeline history
+.ruffus_history.sqlite
