@@ -1,0 +1,388 @@
+---
+title: "Ssd1 enrichment from normalizing to RNA-seq on full-length transcripts"
+author: "Edward Wallace"
+date: "26th September 2020"
+output: 
+  html_document:
+    toc: true
+---
+
+# Summary
+
+This script is to analyse relative *enrichment* of Ssd1 on mRNA, by processing  time & condition matched RNA seq and Ssd1 CRAC data. Then we crudely normalize Ssd1 *counts* against RNA-seq on full-length transcripts.
+
+This analysis shows that:
+
+* The highest-enriched targets of Ssd1 are mRNAs encoding cell wall proteins.
+* Stress protein mRNAs that are most induced by heat shock are *not enriched* in Ssd1 binding, although they are bound by Ssd1.
+* Some unexpected genes are enriched in Ssd1 binding under heat stress, including HOR7, SOD1, NRG2.
+
+Both RNAseq and Ssd1-CRAC are quantified on *full-length estimated unspliced transcripts* using bedtools multicov after genomic alignment with novoalign. This has some problems. For example, reads on 2 overlapping trnascripts are counted on *both*, if the UTRs or ORFs overlap.
+
+Note that this analysis:
+
+* is restricted to mRNAs encoding verified ORFs froms nuclear chromosomes: no mitochondrial chromosome or ncRNAs.
+* uses Pelechano 2013 "most abundant" annotation of transcript ends, and adds a default 25nt 5'UTR and 125nt 3'UTR for transcripts not annotated in Pelechano 2013.
+* normalises count density by transcript length, to give Transcripts Per Million (TPM)
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,cache=TRUE,
+                      cache.path = "cache/normalise_Ssd1_CRAC_counts-",
+                      fig.path = "figure/normalise_Ssd1_CRAC_counts-")
+
+library(tidyverse)
+library(GGally)
+library(cowplot)
+theme_set(theme_cowplot(font_size=11) %+replace% 
+            theme(strip.background=element_blank(),
+                  panel.border = element_rect(color = "grey85", fill = NA)))
+
+# setwd("/homes/ewallac2/Repos/Ssd1_CRACanalysis_2020/rmarkdown")
+
+calc_cpm <- function(x) x / sum(x) * 1e6
+
+calc_tpm <- function(ct,eff_length) {
+  # calculate transcripts per million from count and effective length
+  dens <- ct / eff_length
+  dens_total <- sum(dens, na.rm=TRUE) 
+  return( dens / dens_total * 1e6 )
+}
+
+log10plusepsilon <- function(x,epsilon=1) log10( x + epsilon )
+
+gene_from_attr <- function(attr_string,
+                           before="ID=",gene_str="[\\w-]+",after="_") {
+    # pull a gene name from an attribute string
+    match_str = paste0(before,gene_str,after)
+    attr_string %>%
+        str_extract(match_str) %>%
+        str_remove(before) %>%
+        str_remove(after)
+}
+```
+
+# Inspecting RNA-seq count data
+
+## Load RNA-seq count data
+
+```{r load_RNAseq_count}
+counts_RNA_stranded <- read_tsv("../RNAseq/allsample_transcriptcounts.txt",
+                                comment = "#")  %>%
+  mutate(Gene=gene_from_attr(attributes))
+
+tpms_RNA_stranded <-  counts_RNA_stranded %>% 
+  select(Gene, RNA_A_30,RNA_B_30,RNA_C_GE,RNA_D_GE,RNA_E_42,RNA_F_42) %>%
+  mutate_if(is.numeric,
+            calc_tpm,
+            eff_length = counts_RNA_stranded$end - counts_RNA_stranded$start)
+
+# counts_RNA_stranded_select_melt <- 
+#   counts_RNA_stranded %>% 
+#   select(Type,
+#          RNA_A_30,RNA_B_30, 
+#          RNA_C_GE,RNA_D_GE, 
+#          BY4741) %>%
+#   gather(-Type,key=Sample,value=Count) %>%
+#   mutate(Sample=factor(Sample,
+#                           levels=c("Ssd1_3_30","Ssd1_4_30",
+#                                    "Ssd1_3_42","Ssd1_4_42",
+#                                 "BY4741"),
+#                        labels=c("30C\nrepA","30C\nrepB",
+#                                    "42C\nrepA","42C\nrepB",
+#                                 "-ctrl")))
+```
+
+## Scatter plot shows genewise CPMS are VERY reproducible
+
+```{r scatter_RNAseq_cpm,dependson="load_RNAseq_count",fig.height=8,fig.width=8}
+counts_RNA_stranded %>%
+  select(RNA_A_30,RNA_B_30,RNA_C_GE,RNA_D_GE,RNA_E_42,RNA_F_42) %>%
+  mutate_all(calc_cpm) %>%
+  mutate_all(log10plusepsilon) %>%
+  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+```
+
+## Scatter plot shows genewise TPMs are likewise very reproducible
+
+```{r scatter_RNAseq_tpm,dependson="load_RNAseq_count",fig.height=8,fig.width=8}
+tpms_RNA_stranded %>%
+  select(RNA_A_30,RNA_B_30,RNA_C_GE,RNA_D_GE,RNA_E_42,RNA_F_42) %>%
+  mutate_all(log10plusepsilon,epsilon=1) %>%
+  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+```
+
+
+# Comparing Ssd1 CRAC to RNA-seq data to estimate enrichment
+
+## Load Ssd1-bound genewise counts
+
+```{r load_Ssd1_counts}
+counts_Ssd1_stranded <- read_tsv("../Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt",
+                                 comment = "#") %>% 
+  mutate(Gene=gene_from_attr(attributes))%>%
+  select(Gene,seqname,feature,start,end,attributes,
+         Ssd1_3_30 = `20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30.bam`,
+         Ssd1_4_30 = `20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30.bam`,
+         Ssd1_3_42 = `20190114_Ssd1_CRAC_trimmed_NNNAGAGC_SSD1_3_42.bam`,
+         Ssd1_4_42 = `20190114_Ssd1_CRAC_trimmed_NNNCTAGC_SSD1_4_42.bam`, 
+         BY4741 = `20190114_Ssd1_CRAC_trimmed_NNNGACTTAGC_BY4741.bam`) 
+
+# rename: ("Ssd1_3_30","Ssd1_4_30","Ssd1_3_42","Ssd1_4_42", "BY4741"))
+
+tpms_Ssd1_stranded <-  counts_Ssd1_stranded %>% 
+  select(Gene, Ssd1_3_30,Ssd1_4_30,Ssd1_3_42,Ssd1_4_42,BY4741) %>%
+  mutate_if(is.numeric,
+            calc_tpm,
+            eff_length = counts_Ssd1_stranded$end - counts_Ssd1_stranded$start)
+
+```
+
+```{r show_Ssd1_counts,dependson="load_Ssd1_counts"}
+counts_Ssd1_stranded
+```
+
+
+## Ssd1-bound genewise CPMs are reproducible
+
+```{r scatter_Ssd1_cpm,dependson="load_Ssd1_count",fig.height=7,fig.width=7}
+counts_Ssd1_stranded %>%
+  select(Ssd1_3_30,Ssd1_4_30,Ssd1_3_42,Ssd1_4_42,BY4741) %>%
+  mutate_all(calc_cpm) %>%
+  mutate_all(log10plusepsilon,epsilon=100) %>%
+  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+```
+
+This is not as good, due to relatively low coverage of deduplicated reads.
+
+## Ssd1-bound genewise TPMs are reproducible
+
+Here transform TPMs by `log10(tpm + 10)`, where the `+ 10` smooths away some of the low-count noise.
+
+```{r scatter_Ssd1_tpm,dependson="load_Ssd1_count",fig.height=7,fig.width=7}
+tpms_Ssd1_stranded %>%
+  select(Ssd1_3_30,Ssd1_4_30,Ssd1_3_42,Ssd1_4_42,BY4741) %>%
+  mutate_all(log10plusepsilon,epsilon=10) %>%
+  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+```
+
+
+## Construct a single table containing Ssd1-bound and RNA-seq counts
+
+We:
+
+* melt/pivot the data to get in tidy long format
+* make average TPMs per condition
+* join these "average TPMs per condition" for Ssd1 and RNA
+* calculate a ratio of TPMs; this is crude as it's normalised by total counts only
+* add gene names from SGD
+* confirm that TPM normalization correct by checking that TPMs sum to 1000000.
+
+
+### Melt the data frames and summarize (assigned) TPMs per sample
+
+```{r melt_tpm_both,dependson=c("load_RNAseq_count","load_Ssd1_count")}
+tpms_RNA_melt <- 
+  tpms_RNA_stranded %>%
+  gather(key="Sample",value="TPM",-Gene) 
+
+tpms_RNA_melt %>% group_by(Sample) %>% summarize(TPM=sum(TPM))
+
+tpms_Ssd1_melt <- 
+  tpms_Ssd1_stranded %>%
+  gather(key="Sample",value="TPM",-Gene)
+
+tpms_Ssd1_melt  %>% group_by(Sample) %>% summarize(TPM=sum(TPM))
+```
+
+### Calculate average TPMs and join
+
+```{r mean_join_tpm,dependson=c("melt_tpm_both")}
+scer_mrna_prot <- read_tsv("../input_annotation/scer-mrna-protein-absolute-estimate.txt",
+                           comment="#") %>%
+  rename(Gene=orf,Name=gene)
+
+tpm_RNA_bycondition <- 
+  tpms_RNA_melt %>%
+  separate(Sample,c("SType","Rep","Condition")) %>%
+  group_by(Gene,Condition) %>%
+  summarize(TPM.mean = mean(TPM,na.rm=TRUE))
+
+tpm_Ssd1_bycondition <- 
+  tpms_Ssd1_melt %>%
+  separate(Sample,c("SType","Rep","Condition")) %>%
+  group_by(Gene,Condition) %>%
+  summarize(TPM.mean = mean(TPM,na.rm=TRUE))
+
+tpm_join_bycondition <-
+  full_join( tpm_RNA_bycondition %>% filter(Condition %in% c("30","42")),
+              tpm_Ssd1_bycondition %>% filter(Condition %in% c("30","42")),
+              by=c("Gene","Condition"),
+              suffix=c(".RNA",".Ssd1")) %>%
+  mutate(ratio.Ssd1.RNA = TPM.mean.Ssd1/TPM.mean.RNA) %>%
+  left_join(scer_mrna_prot %>% select(Gene,Name)) %>%
+  select(Gene,Name,Condition,
+         TPM.RNA=TPM.mean.RNA,TPM.Ssd1=TPM.mean.Ssd1,
+         ratio.Ssd1.RNA)
+```
+
+### What the TPM joined data look like
+
+```{r show_tpm_join_bycondition,dependson="mean_join_tpm"}
+tpm_join_bycondition
+```
+
+## Plot TPMs by condition, Ssd1-bound vs RNA, with some labels
+
+```{r plot_Ssd1_vs_RNA_labels,dependson="mean_join_tpm",fig.height=3.2,fig.width=6}
+ggplot(data=tpm_join_bycondition,aes(x=TPM.RNA,y=TPM.Ssd1)) +
+  geom_point(size=0.2,colour="grey50") +
+  ggrepel::geom_text_repel(data=
+                             tpm_join_bycondition %>%
+                             filter(TPM.RNA > 10000 | TPM.Ssd1 > 10000 | 
+                                      (ratio.Ssd1.RNA > 50 & TPM.Ssd1 > 500) ),
+                           aes(label=Name),size=2,
+                           label.padding=0.02,segment.size=0.1,
+                           force=0.1) + 
+  scale_x_log10("RNA-seq density (TPM)",
+                limits=c(5,max(tpm_join_bycondition$TPM.RNA)),
+                oob=scales::squish,expand=c(0.01,0.01)) +
+  scale_y_log10("Ssd1 CRAC density (TPM)",
+                limits=c(5,max(tpm_join_bycondition$TPM.Ssd1)),
+                oob=scales::squish,expand=c(0.01,0.01),
+                breaks=c(10,100,1000,10000,100000),
+                labels=c("10","100","1000","10000","100000")) +
+  facet_wrap(~Condition)
+```
+
+## Ssd1-enriched genes by crude TPM ratios
+
+These are familiar: TOS1, TOS6, SUN4/SIM1/UTH1/SRL1, etc.
+
+```{r enrich_Ssd1_vs_RNA,dependson="mean_join_tpm",results.show=TRUE}
+tpm_join_bycondition %>%
+  filter(Condition=="30",TPM.RNA > 20) %>%
+  arrange(desc(ratio.Ssd1.RNA))
+
+tpm_join_bycondition %>%
+  filter(Condition=="42",TPM.RNA > 20) %>%
+  arrange(desc(ratio.Ssd1.RNA))
+```
+
+
+### Make output files for Ssd1-enriched genes over 5x
+
+```{r enrich_Ssd1_vs_RNA_out,dependson="mean_join_tpm",results.show=TRUE}
+Ssd1_targets_TPMratio5x_30C <- 
+  tpm_join_bycondition %>%
+  filter(Condition=="30",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
+  arrange(desc(ratio.Ssd1.RNA)) 
+
+write_tsv(x = Ssd1_targets_TPMratio5x_30C %>%
+            mutate_if(is.numeric, round, digits = 3),
+          path="../results/Ssd1_targets_TPMratio5x_30C.txt")
+
+Ssd1_targets_TPMratio5x_42C <- 
+  tpm_join_bycondition %>%
+  filter(Condition=="42",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
+  arrange(desc(ratio.Ssd1.RNA))
+
+write_tsv(x = Ssd1_targets_TPMratio5x_42C %>%
+            mutate_if(is.numeric, round, digits = 3),
+          path="../results/Ssd1_targets_TPMratio5x_42C.txt")
+```
+
+## Which genes are enriched at 42C not 30C?
+
+```{r enrich_Ssd1_42more,dependson="mean_join_tpm"}
+Ssd1_targets_TPMratio5x_42C %>% 
+  filter(! Gene %in% Ssd1_targets_TPMratio5x_30C$Gene)
+```
+
+
+## The highest-expressed genes at 42C are not enriched in Ssd1 binding
+
+```{r highest_42C,dependson="mean_join_tpm"}
+tpm_join_bycondition %>%
+  filter(Condition=="42") %>%
+  arrange(desc(TPM.RNA))
+```
+
+These,e.g. Hsp104, aren't enriched in Ssd1 binding. 
+
+## Highly-expressed genes at 42C *over 2x* enriched in Ssd1 binding
+
+```{r highest_42C_ssd1_2x,dependson="mean_join_tpm"}
+tpm_join_bycondition %>%
+  filter(Condition=="42",ratio.Ssd1.RNA > 2) %>%
+  arrange(desc(TPM.RNA))
+```
+
+* SPO24 again
+* TSA1/SOD1 involved in oxidative stress resistance
+* CCW12/CWP1/TIP1/BGL2 stress-induced cell wall proteins
+* YDR524C-B Putative protein of unknown function; SWAT-GFP and mCherry fusion proteins localize to the endoplasmic reticulum
+
+## GPI-anchored cell wall proteins
+
+15 prominent GPI-anchored cell wall proteins. This list demonstrates that not all GPI-anchored proteins are Ssd1 targets.
+
+```{r GPI_anchored15_30C,dependson="mean_join_tpm"}
+GPI_anchored15 <- c("CCW12","CCW14","CRH1","CRH2","CWP1","CWP2",
+                    "ECM33","EXG2","GAS1","GAS5","GAS5","MKC7","PLB2","PRY3","PST1")
+tpm_join_bycondition %>%
+  filter(Condition=="30",Name %in% GPI_anchored15) %>%
+  arrange(Name)
+```
+
+
+
+## Plot TPMs by condition, select genes labeled
+
+```{r plot_Ssd1_vs_RNA_colourlabels,dependson="mean_join_tpm",fig.height=3.2,fig.width=6}
+Ssd1_targets_select <- c("CTS1", "DSE2", "SIM1", "SUN4", "TOS1", "UTH1", "HSP150", "SCW4", "LRE1", "SRL1", "CCW12", "NCA3", "CIS3", "MMR1", "CWP2", "HOR7", "SPO24")
+
+HSPs_select <- c("HSP26","HSP42","HSP104","SSA1","SSA2","SSA3","SSA4")
+
+Abundant_genes_select <- c("TDH3")
+
+select_genetype_df <- bind_rows(
+  tibble(GType = "Ssd1_target", Name = Ssd1_targets_select),
+  tibble(GType = "HSPs_select", Name = HSPs_select),
+  tibble(GType = "Abundant", Name = Abundant_genes_select)
+)
+scale_colour_gtype <-
+  scale_colour_manual(values = c(Ssd1_target = "blue2",
+                                 HSPs_select = "red3",
+                                 Abundant = "black") 
+                      )
+
+plot_Ssd1_vs_RNA_colourlabels <- 
+ggplot(data=tpm_join_bycondition,aes(x=TPM.RNA,y=TPM.Ssd1)) +
+  geom_point(size=0.2,colour="grey50") +
+  geom_point(
+    data = left_join(select_genetype_df,
+                     tpm_join_bycondition),
+    aes(label=Name,colour=GType),
+    size=0.3) + 
+  ggrepel::geom_text_repel(
+    data = left_join(select_genetype_df,
+                     tpm_join_bycondition),
+    aes(label=Name,colour=GType),
+    size=2.5,segment.size=0.1,force=0.1) + 
+  scale_colour_gtype + theme(legend.position = "none") + 
+  scale_x_log10("RNA-seq density (TPM)",
+                limits=c(5,max(tpm_join_bycondition$TPM.RNA)),
+                oob=scales::squish,expand=c(0.01,0.01)) +
+  scale_y_log10("Ssd1 CRAC density (TPM)",
+                limits=c(5,max(tpm_join_bycondition$TPM.Ssd1)),
+                oob=scales::squish,expand=c(0.01,0.01),
+                breaks=c(10,100,1000,10000,100000),
+                labels=c("10","100","1000","10000","100000")) +
+  facet_wrap(~Condition)
+plot_Ssd1_vs_RNA_colourlabels
+
+ggsave("../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf",
+       plot_Ssd1_vs_RNA_colourlabels, width = 6, height = 3.2)
+```
+

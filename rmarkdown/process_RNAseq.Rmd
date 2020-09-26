@@ -1,0 +1,153 @@
+---
+title: "RNA-seq data analysis"
+author: "Edward Wallace"
+date: "26/09/2020"
+output: html_document
+---
+
+## Summary
+
+This script contains the code used to preprocess RNA-seq data measuring mRNA levels in conditions matched to CRAC experiments.
+
+It begins at fastq files, and ends with a text-format coverage file on RNA transcripts: `RNAseq/allsample_transcriptcounts.txt`. 
+
+## run fastqc for quality control
+
+```{bash fastqc,eval=FALSE}
+fastqc -t 12 \
+-o /homes/ewallac2/Ssd1_Feb2020/RNAseq/fastqc \
+/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/*.fastq
+```
+
+
+## align to genome with novoalign
+
+```{R novoalign,echo=FALSE,eval=FALSE}
+# novoindex = "/homes2/genomes/s.cerevisiae/sacCer3/novoindexes/sacCer3.novoindex"
+novoindex = "/homes/rbayne2/CRACAnalysisJan2019_1/Saccharomyces_cerevisiae.EF4.74.dna.toplevel.shortChrNames.novoindex"
+
+alignReads <- function(inputfile,outputfile,dryrun=FALSE) {
+  # Runs novoalign inputfile
+  cmd <- paste("novoalign -o SAM -r Random -d ",novoindex, 
+        "-f ", inputfile, " > ", outputfile)
+  if(!dryrun) {
+    system(cmd)
+  }
+  return(cmd)
+}
+
+alignReadsSample <- function(samplestem,inputdir,outputdir,
+                             sampleext=".fastq",dryrun=FALSE) {
+  alignReads(inputfile  = paste0(inputdir,  "/", samplestem, sampleext),
+             outputfile = paste0(outputdir, "/", samplestem, ".sam"),
+             dryrun=dryrun)
+}
+
+alignReadsSample("SB20190918_A_control",
+                 "/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 dryrun=TRUE)
+alignReadsSample("SB20190918_B_control",
+                 "/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 dryrun=TRUE)
+alignReadsSample("SB20190918_E_16min_42C",
+                 "/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 dryrun=TRUE)
+alignReadsSample("SB20190918_F_16min_42C",
+                 "/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 dryrun=TRUE)
+alignReadsSample("SB20190918_C_16min_GE",
+                 "/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 dryrun=TRUE)
+alignReadsSample("SB20190918_D_16min_GE",
+                 "/homes/ewallac2/fastq/RNA_stressmatched_StefanBresson2020/",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 dryrun=TRUE)
+```
+
+```{R bamsortindex,echo=FALSE,eval=FALSE}
+
+bamSort <- function(inputfile,outputfile,np=16,dryrun=FALSE) {
+  # sorts bamfile
+  cmd <- paste("samtools sort -O BAM -@", np, 
+               "-o", outputfile,  inputfile)
+  if(!dryrun) {
+    system(cmd)
+  }
+  return(cmd)
+}
+
+bamIndex <- function(inputfile,np=16,dryrun=FALSE) {
+  # indexes the sorted bamfile
+  cmd <- paste("samtools index -b -@", np, inputfile)
+  if(!dryrun) {
+    system(cmd)
+  }
+  return(cmd)
+}
+
+bamSortIndexSample <- function(samplestem,inputdir,outputdir,dryrun=FALSE) {
+  inputfile  = paste0(inputdir,  "/", samplestem, ".sam")
+  sortedfile = paste0(outputdir, "/", samplestem, ".bam")
+  list(bamSort(inputfile,sortedfile,dryrun=dryrun),
+       bamIndex(sortedfile,dryrun=dryrun))
+}
+
+bamSortIndexSample("SB20190918_A_control",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam",
+                 dryrun=TRUE)
+bamSortIndexSample("SB20190918_B_control",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam",
+                 dryrun=TRUE)
+bamSortIndexSample("SB20190918_E_16min_42C",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam",
+                 dryrun=TRUE)
+bamSortIndexSample("SB20190918_F_16min_42C",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam",
+                 dryrun=TRUE)
+bamSortIndexSample("SB20190918_C_16min_GE",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam",
+                 dryrun=TRUE)
+bamSortIndexSample("SB20190918_D_16min_GE",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
+                 "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam",
+                 dryrun=TRUE)
+```
+
+## count with bedtools
+
+```{python header_multicov_counts}
+import time
+
+gff_fields = ["seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes"]
+sample_names = ["RNA_A_30", "RNA_B_30", "RNA_C_GE","RNA_D_GE", "RNA_E_42", "RNA_F_42"]
+
+with open("RNAseq/allsample_transcriptcounts.txt", "w") as outhandle:
+	outhandle.write( "# allsample_transcriptcounts.txt - counts to transcripts from multiBamCov\n")
+	outhandle.write( "# Run from normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd\n")
+	outhandle.write( "# RNA_stressmatched_StefanBresson2020, date %s\n" % time.strftime("%d-%m-%Y"))
+	outhandle.write( "%s\n" % '\t'.join(gff_fields + sample_names))
+```
+
+
+```{bash multicov_counts,echo=TRUE,eval=FALSE}
+multiBamCov -S \
+-bed input_annotation/abundant_verified_full-ORF_ypd_plus_other_fixed_UTR_length_transcripts.gff \
+-bams \
+/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam/SB20190918_A_control.bam \
+/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam/SB20190918_B_control.bam \
+/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam/SB20190918_C_16min_GE.bam \
+/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam/SB20190918_D_16min_GE.bam \
+/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam/SB20190918_E_16min_42C.bam \
+/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_bam/SB20190918_F_16min_42C.bam \
+>> RNAseq/allsample_transcriptcounts.txt
+```
