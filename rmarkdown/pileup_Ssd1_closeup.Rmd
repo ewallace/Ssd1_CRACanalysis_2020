@@ -1,0 +1,344 @@
+---
+title: "Pileup Plots in R, for Ssd1 analysis"
+author: "Edward Wallace"
+date: "28 September 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(forcats)
+library(stringr)
+library(cowplot)
+theme_set(theme_cowplot(font_size = 10) + 
+              theme(strip.background = element_blank()) 
+          )
+```
+
+## Summary
+
+Pileup plots for Ssd1 CRAC data. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the `CNYUCNYU` Ssd1-enriched element in those transcripts.
+
+## Functions for data loading and plotting
+
+```{r pileup_functions}
+read_pileuptxt <- function(file,converturidine=FALSE) {
+    pileupdf <- readr::read_tsv(file = file,
+                    comment = "#",
+                    col_types = "cifiii",
+                    col_names = c("target","position","nucleotide",
+                                  "hits","substitutions","deletions")
+    )
+    if (converturidine) {
+        pileupdf <- mutate(pileupdf,
+                           nucleotide = fct_recode(nucleotide, U = "T") )
+    }
+    pileupdf
+}
+
+scale_fill_pileup <- function(...) {
+    scale_fill_manual(values = c(aligned = "grey50",
+                                 substitutions = "blue2",
+                                 deletions = "red2"),
+                      ...)
+}
+
+plot_pileup_one <- function(pileupdf, 
+                            include = "allonly",
+                            nucseq = FALSE, 
+                            nuctxtsize = 2.8) {
+    p_pileup <- ggplot(data = pileupdf, aes(x=position)) +
+        coord_cartesian(expand = FALSE)
+    if (include == "allonly") {
+        p_pileup <- p_pileup + 
+            geom_col(aes(y = hits))
+    } else if (include == "allsub") {
+        p_pileup <- p_pileup + 
+            geom_col(aes(y = hits,
+                         fill = "aligned")) +
+            geom_col(aes(y = substitutions,
+                         fill = "substitutions")) 
+    } else if (include == "alldel") {
+        p_pileup <- p_pileup + 
+            geom_col(aes(y = hits,
+                         fill = "aligned")) + 
+            geom_col(aes(y = deletions,
+                         fill = "deletions"))
+    } else if (include == "allsubdel") {
+        # this is a hack that prints substitutions behind deletions
+        # so that total height is added, it looks "stacked".
+        # There would be a better way of doing it with reshaping and
+        # position = "stack".
+        p_pileup <- p_pileup + 
+            geom_col(aes(y = hits,
+                         fill = "aligned"))  +
+            geom_col(aes(y = substitutions + deletions,
+                         fill = "substitutions")) + 
+            geom_col(aes(y = deletions,
+                         fill = "deletions"))  + 
+            scale_fill_pileup("Hit type")
+    }
+    
+    if (nucseq) {
+        p_pileup <- p_pileup + 
+            geom_text(aes(label = nucleotide),
+                      y = 0, family = 'Courier', vjust = 1.1,
+                      size = nuctxtsize) +
+            theme(axis.title.x =  element_blank(),
+                  axis.line.x = element_blank(),
+                  axis.text.x = element_blank(),
+                  axis.ticks.x = element_blank()) +
+            expand_limits(y = - max(pileupdf$hits / 16 ) )
+    }
+    p_pileup
+}
+
+plot_pileuphits_line <- function(pileupdf) {
+    ggplot(data = pileupdf, 
+           aes(x=position, y = hits)) +
+        coord_cartesian(expand = FALSE) + 
+        geom_line(aes(y = hits))
+}
+
+plot_nucseq <- function(nucdf) {
+    # fix the width
+    ggplot(data = nucdf, aes(x = position, label = nucleotide) ) +
+        geom_text(y=0,family='Courier') + 
+        theme_nothing()
+}
+
+position_locate_all <- function(posdf,
+                                pattern = "C[ACUG][CU]UC[ACUG][CU]U") {
+    posdf$nucleotide %>%
+        as.character() %>%
+        paste(collapse = "") %>%
+        stringr::str_locate_all(pattern) %>%
+        .[[1]]
+}
+```
+
+## Load just one data set for example analysis
+
+```{r load_onetable}
+# setwd("~/Repos/Ssd1_CRACanalysis_2020/rmarkdown")
+
+Ssd1_3_30_df <- read_pileuptxt("../Ssd1_CRAC_demult_dedup_20190114_all/pyPileup_analyses/20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30_pileups.txt",converturidine = TRUE)
+```
+
+## Plot pileup along SUN4 transcript as a line
+
+```{r plot_SUN4line,dependson = c("pileup_functions","load_onetable"),fig.height = 2,fig.width=4}
+plot_pileuphits_line(filter(Ssd1_3_30_df, target == "SUN4") )
+```
+
+## Plot pileup focus on peaks SUN4 5'UTR
+
+```{r plot_SUN4focus,dependson = c("pileup_functions","load_onetable"),fig.height = 2,fig.width=4}
+SUN4_5UTRwide_df <- filter(Ssd1_3_30_df, 
+                         target == "SUN4", 
+                         position >= 81, 
+                         position <= 231)
+
+SUN4_5UTRwide_plot <- plot_pileup_one(SUN4_5UTRwide_df, include = "allsubdel") + 
+    labs(title = "SUN4 5'UTR focus, pileup plot")
+SUN4_5UTRwide_plot
+# plot_nucseq(SUN4_5focus_df)
+# ggsave(plot = SUN4_5UTRwide_plot, filename = "SUN4_5UTRwide_plot.pdf", 
+#        height = 2, width=4, device = "pdf")
+```
+
+## Plot pileup focus on SUN4 5'UTR, restricted to "SUN4_duo" vicinity
+
+```{r plot_SUN4dualSEE,dependson = c("pileup_functions","load_onetable"),fig.height = 2, fig.width=6}
+# setwd("Downloads/pyPileup_analyses/")
+
+SUN4dual_df <- filter(Ssd1_3_30_df, 
+                      target == "SUN4", 
+                      position >= 127, 
+                      position <= 196)
+
+SUN4_5dual_plot <- plot_pileup_one(SUN4dual_df, 
+                                   include = "allsubdel", 
+                                   nucseq = TRUE) + 
+    labs(title = "SUN4 5'UTR dual, pileup plot")
+SUN4_5dual_plot
+ggsave(plot = SUN4_5dual_plot, filename = "SUN4_5dual_3_30_plot.pdf",
+       height = 2, width=6, device = "pdf")
+```
+
+## Find all SEE positions in transcripts
+
+Plot pileup on same area surrounding the SEE motifs (-12, +2) to look for consistent location of crosslinking sites.
+
+```{r fig.height = 8, fig.width = 8}
+SEE_positions <- position_locate_all(Ssd1_3_30_df) %>%
+    as_tibble() %>%
+    mutate(motifid = 1:nrow(.))
+
+get_chunk <- function(sedf,datadf) {
+    datadf[sedf$start : sedf$end,]
+}
+
+SEE_motif_pileups <- 
+    SEE_positions[-1,] %>%
+    mutate(start = start - 12, end=end + 2) %>%
+    group_by(motifid) %>%
+    do(get_chunk(., datadf = Ssd1_3_30_df)) %>%
+    mutate(motifidg = paste(target, motifid),
+           maxhits = max(hits)) %>%
+    filter(maxhits > 150)
+
+# plot_pileup_one(SEE_motif_pileups,
+#                 include = "allsubdel") + 
+#     facet_wrap( ~ motifidg,scales = "free")  +
+#             theme(axis.title.x =  element_blank(),
+#                   axis.line.x = element_blank(),
+#                   axis.text.x = element_blank(),
+#                   axis.ticks.x = element_blank()) 
+
+SEE_motif_pileups %>%
+    do(plot = plot_pileup_one(.,include = "allsubdel",
+                              nucseq = TRUE,nuctxtsize = 2) +
+        theme(legend.position = "none") + 
+           labs(title = .$motifidg[1])) %>%
+    .$plot %>%
+    plot_grid(plotlist = .)
+# SEE_motifs
+```
+
+We conclude that we are likely to detect crosslinking by apparent deletions in U-rich regions 1-4nt upstream of CNYUCNYU. However, because htese are often U(4), or in some cases (CU)(2), the data do not tell us exactly which nucleotide position is crosslinked.
+
+## Load pileup data from all four Ssd1 CRAC samples
+
+```{r load_fourtable}
+# setwd("Downloads/pyPileup_analyses/")
+
+data_dir <- "../Ssd1_CRAC_demult_dedup_20190114_all/pyPileup_analyses/"
+Ssd1_allsamples_df <- 
+    bind_rows( 
+        read_pileuptxt(paste0(data_dir,
+                              "20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30_pileups.txt"),
+                       converturidine = TRUE) %>%
+            mutate(Sample="3_30",Temperature="30C",BioRep = "A"),
+        read_pileuptxt(paste0(data_dir,
+                              "20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30_pileups.txt"),
+                       converturidine = TRUE)  %>%
+            mutate(Sample="4_30",Temperature="30C",BioRep = "B"),
+        read_pileuptxt(paste0(data_dir,
+                              "20190114_Ssd1_CRAC_trimmed_NNNAGAGC_SSD1_3_42_pileups.txt"),
+                       converturidine = TRUE) %>%
+            mutate(Sample="3_42",Temperature="42C",BioRep = "A"),
+        read_pileuptxt(paste0(data_dir,
+                              "20190114_Ssd1_CRAC_trimmed_NNNCTAGC_SSD1_4_42_pileups.txt"),
+                       converturidine = TRUE)  %>%
+            mutate(Sample="4_42",Temperature="42C",BioRep = "B")
+    ) %>%
+    mutate(SampleNice = paste(Temperature,"Rep.", BioRep))
+
+Ssd1_allsamples_df
+```
+
+## Plot pileup on SUN4 5'UTR to show reproducibility
+
+```{r plot_SUN4_reproducibility}
+SUN4_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
+                         target == "SUN4", 
+                         position >= 81, 
+                         position <= 231)
+
+SUN4_5UTRwiderep_plot <- 
+    plot_pileup_one(SUN4_5UTRwiderep_df, include = "allsubdel") + 
+    facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
+    labs(title = "SUN4 5'UTR peak, 30C rep A", x = "position from TSS")
+SUN4_5UTRwiderep_plot
+
+ggsave(plot = SUN4_5UTRwiderep_plot, 
+       filename = "SUN4_5dual_reproducible_plot.pdf",
+       height = 4, width = 6, device = "pdf")
+```
+
+## Plot pileup on UTH1 5'UTR to show reproducibility
+
+```{r plot_UTH1_reproducibility}
+UTH1_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
+                         target == "UTH1", 
+                         position >= 1, 
+                         position <= 250)
+
+UTH1_5UTRwiderep_plot <- 
+    plot_pileup_one(UTH1_5UTRwiderep_df, include = "allsubdel") + 
+    facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
+    labs(title = "UTH1 5'UTR peaks", x = "position from TSS")
+UTH1_5UTRwiderep_plot
+
+ggsave(plot = UTH1_5UTRwiderep_plot, 
+       filename = "UTH1_5wide_reproducible_plot.pdf",
+       height = 4, width = 6, device = "pdf")
+```
+
+## Plot focused on UTH1 CNYUCNYU vicinity
+
+```{r plot_UTH1_focus,fig.height = 2, fig.width = 10}
+UTH1_5UTRwideone_plot <- 
+    filter(UTH1_5UTRwiderep_df, Sample == "3_30" ) %>%
+    plot_pileup_one(include = "allsubdel",nucseq = TRUE) + 
+    labs(title = "UTH1 5'UTR peaks, 30C rep A", x = "position from TSS") + 
+    theme(legend.position = c(0.9,0.7))
+UTH1_5UTRwideone_plot
+
+ggsave(plot = UTH1_5UTRwideone_plot, 
+       filename = "UTH1_5wide_3_30_plot.pdf",
+       height = 2, width = 12, device = "pdf")
+```
+
+## Plot pileup on SUN4 5'UTR to show reproducibility
+
+```{r plot_SRL1_reproducibility}
+SRL1_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
+                         target == "SRL1", 
+                         position >= 1, 
+                         position <= 300)
+
+SRL1_5UTRwiderep_plot <- 
+    plot_pileup_one(SRL1_5UTRwiderep_df, include = "allsubdel") + 
+    facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
+    labs(title = "SRL1 5'UTR peaks", x = "position from TSS")
+SRL1_5UTRwiderep_plot
+
+ggsave(plot = SRL1_5UTRwiderep_plot, 
+       filename = "SRL1_5wide_reproducible_plot.pdf",
+       height = 4, width = 6, device = "pdf")
+```
+
+## Plot focused on SRL1 CNYUCNYU vicinities - there are two
+
+```{r plot_SRL1_focus,fig.height = 2, fig.width = 10}
+SRL1_5UTRupone_plot <- 
+    filter(SRL1_5UTRwiderep_df, Sample == "3_30" ) %>%
+    plot_pileup_one(include = "allsubdel",nucseq = TRUE) + 
+    xlim(40,160) + 
+    labs(title = "SRL1 5'UTR peaks, 30C rep A", x = "position from TSS") + 
+    theme(legend.position = c(0.3,0.7))
+SRL1_5UTRupone_plot
+
+ggsave(plot = SRL1_5UTRupone_plot, 
+       filename = "SRL1_5up_3_30_plot.pdf",
+       height = 2, width = 12, device = "pdf")
+
+SRL1_5UTRdownone_plot <- 
+    filter(SRL1_5UTRwiderep_df, Sample == "3_30" ) %>%
+    plot_pileup_one(include = "allsubdel",nucseq = TRUE) + 
+    xlim(180,300) + 
+    labs(title = "SRL1 5'UTR peaks, 30C rep A", x = "position from TSS") + 
+    theme(legend.position = "none")
+SRL1_5UTRdownone_plot
+
+ggsave(plot = SRL1_5UTRdownone_plot, 
+       filename = "SRL1_5down_3_30_plot.pdf",
+       height = 2, width = 12, device = "pdf")
+```
+
