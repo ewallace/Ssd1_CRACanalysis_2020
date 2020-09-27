@@ -1,0 +1,260 @@
+---
+title: "Peak analysis of Ssd1 CRAC data"
+author: "Edward Wallace"
+date: "28 Sep 2020"
+output: html_document
+---
+
+# Summary
+
+This analysis takes 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(magrittr)
+library(cowplot)
+theme_set(theme_cowplot(font_size=11))
+
+library(rtracklayer)
+library(Biostrings)
+
+data_output_dir <- "../results/"
+
+read_FDR_gff <- function(file){
+    # tidyverse read gff function from rmonad vignette
+    # https://cran.r-project.org/web/packages/rmonad/vignettes/gff-processing.html
+    readr::read_tsv(
+        file,
+        col_names = c(
+            "chromosome",
+            "feature",
+            "source",
+            "start",
+            "end",
+            "peak_height",
+            "strand",
+            "FDR",
+            "attributes"
+        ),
+        na        = ".",
+        comment   = "#",
+        col_types = "ccciidcnc"
+    ) %>% 
+        mutate(ID=attributes %>% 
+                   str_extract('gene_id \"[\\w.-]+\"') %>% 
+                   str_sub(start=10,end=-2),
+               Gene=attributes %>% 
+                   str_extract('gene_name \"[\\w.]+\"') %>% 
+                   str_sub(start=12,end=-2)
+               )
+   
+
+}
+
+print_gff_nice <- function(gff_df) {
+    gff_df %>%
+    select(chromosome,start,end,peak_height,strand,ID,Gene) 
+}
+
+```
+
+The goal of this analysis is to:
+
+* filter Ssd1 CRAC hits by read count in addition to FDR
+* generate fasta files of peak sequences
+* do a motif anlaysi for automatic detection of sequence binding (perhaps externally in MEME)
+
+EF4.74 annotation, R64-1-1 genome build
+
+# Load gtfs
+
+```{r load_gffs}
+# setwd("~/Repos/Ssd1_CRACanalysis_2020/rmarkdown")
+S3_30_df <- read_FDR_gff("../Ssd1_CRAC_demult_dedup_20190114_all/pyCalculateFDRs_analyses/20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30_output_FDRs.gtf")
+S3_42_df <- read_FDR_gff("../Ssd1_CRAC_demult_dedup_20190114_all/pyCalculateFDRs_analyses/20190114_Ssd1_CRAC_trimmed_NNNAGAGC_SSD1_3_42_output_FDRs.gtf")
+S4_30_df <- read_FDR_gff("../Ssd1_CRAC_demult_dedup_20190114_all/pyCalculateFDRs_analyses/20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30_output_FDRs.gtf")
+S4_42_df <- read_FDR_gff("../Ssd1_CRAC_demult_dedup_20190114_all/pyCalculateFDRs_analyses/20190114_Ssd1_CRAC_trimmed_NNNCTAGC_SSD1_4_42_output_FDRs.gtf")
+
+```
+
+
+## Sort dataframes
+
+Print top peaks by (deduplicated) coverage in each sample.
+
+```{r print_descending, dependson="load_gffs"}
+
+S3_30_df %>%
+    arrange(desc(peak_height)) %>%
+    print_gff_nice()
+
+S3_42_df %>%
+    arrange(desc(peak_height)) %>%
+    print_gff_nice()
+
+S4_30_df %>%
+    arrange(desc(peak_height)) %>%
+    print_gff_nice()
+
+S4_42_df %>%
+    arrange(desc(peak_height)) %>%
+    print_gff_nice()
+
+```
+
+
+# Plot coverage vs FDR
+
+```{r plot_FDR_vs_height}
+ggplot(data=tibble(),aes(x=peak_height,y=FDR)) +
+    geom_point(data=S3_30_df,aes(colour="S3_30")) + 
+    scale_x_log10()
+```
+
+
+# Plot distribution of coverage
+
+
+```{r plot_peak_height, dependson="load_gffs",fig.width=6, fig.height=3}
+ggplot(data=tibble(),aes(x=peak_height)) +
+    geom_density(data=S3_30_df,aes(colour="S3_30"),kernel="rectangular") +
+    geom_density(data=S3_42_df,aes(colour="S3_42"),kernel="rectangular") +
+    geom_density(data=S4_30_df,aes(colour="S4_30"),kernel="rectangular") +
+    geom_density(data=S4_42_df,aes(colour="S4_42"),kernel="rectangular") +
+    scale_x_log10(expand=c(0.01,0.01)) +
+    scale_y_continuous(expand=c(0,0)) +
+    labs(colour="Sample",x="Minimum Coverage by Gene") + 
+    theme(axis.line.y=element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank(),
+          legend.position=c(0.8,0.8))
+    
+```
+
+# Choose top 500 peaks for each sample
+
+```{r sort_descending_top500, dependson="load_gffs"}
+
+#sort by peak_height descending
+S3_30_df_desc500 <- S3_30_df %>%
+    arrange(desc(peak_height)) %>%
+    head(n=500)
+
+S3_42_df_desc500 <- S3_42_df %>%
+    arrange(desc(peak_height)) %>%
+    head(n=500)
+
+S4_30_df_desc500 <- S4_30_df %>%
+    arrange(desc(peak_height)) %>%
+    head(n=500)
+
+S4_42_df_desc500 <- S4_42_df %>%
+    arrange(desc(peak_height)) %>%
+    head(n=500)
+
+```
+
+# Find sequences for peaks on the top 500 genes.
+
+
+```{r find_seqs_setup}
+S288C_FaF <- Rsamtools::FaFile("../input_annotation/Saccharomyces_cerevisiae.EF4.74.dna.toplevel.shortChrNames.fa")
+Rsamtools::indexFa(S288C_FaF)
+
+getSeq_gffdf <- function(gff_df,faf=S288C_FaF) {
+    out_seqs <- getSeq(faf,
+                       makeGRangesFromDataFrame(gff_df) )
+    names(out_seqs) <- gff_df %>%
+        unite("peakname", chromosome, start, end, strand, ID,sep="_") %>%
+        pull(peakname)
+    return(out_seqs)
+}
+
+select_seqs_above_minwidth <- function(StringSet,minwidth=10) {
+    widths <- width(StringSet)
+    return( StringSet[ which(widths > minwidth) ])
+}
+
+```
+
+## Top 500 peaks, min width 8 (more inclusive)
+
+```{r write_desc500_minwidth8_peakseqs}
+S3_30_desc500_minwidth8_peakseqs <- getSeq_gffdf(S3_30_df_desc500) %>%
+    select_seqs_above_minwidth(minwidth=8) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_3_30_peaks_FDR_p0_01_desc500_minwidth_8.fa")
+                    )
+
+S3_42_desc500_minwidth8_peakseqs <- getSeq_gffdf(S3_42_df_desc500) %>%
+    select_seqs_above_minwidth(minwidth=8) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_3_42_peaks_FDR_p0_01_desc500_minwidth_8.fa")
+    )
+
+S4_30_desc500_minwidth8_peakseqs <- getSeq_gffdf(S4_30_df_desc500) %>%
+    select_seqs_above_minwidth(minwidth=8) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_4_30_peaks_FDR_p0_01_desc500_minwidth_8.fa")
+                    )
+
+S4_42_desc500_minwidth8_peakseqs <- getSeq_gffdf(S4_42_df_desc500) %>%
+    select_seqs_above_minwidth(minwidth=8) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_4_42_peaks_FDR_p0_01_desc500_minwidth_8.fa")
+    )
+```
+
+## Top 100 peaks, min width 20 (more exclusive)
+
+```{r write_desc100_minwidth20_peakseqs}
+S3_30_desc100_minwidth20_peakseqs <- S3_30_df_desc500 %>%
+    head(n=100) %>%
+    getSeq_gffdf() %>%
+    select_seqs_above_minwidth(minwidth=20) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20.fa")
+                    )
+
+S3_42_desc100_minwidth20_peakseqs <- S3_42_df_desc500 %>%
+    head(n=100) %>%
+    getSeq_gffdf() %>%
+    select_seqs_above_minwidth(minwidth=20) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa")
+    )
+
+S4_30_desc100_minwidth20_peakseqs <- S4_30_df_desc500 %>%
+    head(n=100) %>%
+    getSeq_gffdf() %>%
+    select_seqs_above_minwidth(minwidth=20) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20.fa")
+                    )
+
+S4_42_desc100_minwidth20_peakseqs <- S4_42_df_desc500 %>%
+    head(n=100) %>%
+    getSeq_gffdf() %>%
+    select_seqs_above_minwidth(minwidth=20) %T>% 
+    writeXStringSet(paste0(data_output_dir,
+                           "/Ssd1_4_42_peaks_FDR_p0_01_desc100_minwidth20.fa")
+    )
+```
+
+## MEME motif search
+
+```{r run_MEME}
+run_MEME <- function(fafile, outputdir, nmotifs = 10, minw = 5, maxw = 10) {
+    cmd_meme <- paste("meme", fafile, "-dna", "-oc", outputdir, 
+                      "-mod anr", "-nmotifs", nmotifs, 
+                      "-minw", minw, "-maxw", maxw, 
+                      "-markov_order 1", "-objfun classic")
+    system(cmd_meme)
+    cmd_meme
+}
+run_MEME(paste0(data_output_dir,
+                           "/Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20.fa"),
+         data_output_dir)
+```
+
