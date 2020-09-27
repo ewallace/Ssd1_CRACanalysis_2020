@@ -244,17 +244,34 @@ S4_42_desc100_minwidth20_peakseqs <- S4_42_df_desc500 %>%
 
 ## MEME motif search
 
-```{r run_MEME}
-run_MEME <- function(fafile, outputdir, nmotifs = 10, minw = 5, maxw = 10) {
+Runs MEME motif search on top 100 peaks. We ran this with MEME 5.1.1
+
+```{r run_MEME, dependson="write_desc100_minwidth20_peakseqs"}
+run_MEME <- function(fafile, outputdir, nmotifs = 10, minw = 5, maxw = 8,dry_run = FALSE) {
     cmd_meme <- paste("meme", fafile, "-dna", "-oc", outputdir, 
                       "-mod anr", "-nmotifs", nmotifs, 
                       "-minw", minw, "-maxw", maxw, 
                       "-markov_order 1", "-objfun classic")
-    system(cmd_meme)
+    if (!dry_run) {
+        system(cmd_meme)
+    }
     cmd_meme
 }
 run_MEME(paste0(data_output_dir,
                            "/Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20.fa"),
-         data_output_dir)
+         paste0(data_output_dir,"/Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20_MEME"),
+         dry_run = TRUE)
+run_MEME(paste0(data_output_dir,
+                           "/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa"),
+         paste0(data_output_dir,"/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME"),
+         dry_run = TRUE )
+run_MEME(paste0(data_output_dir,
+                           "/Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20.fa"),
+         paste0(data_output_dir,"/Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20_MEME"),
+         dry_run = TRUE )
+run_MEME(paste0(data_output_dir,
+                           "/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa"),
+         paste0(data_output_dir,"/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME") ,
+         dry_run = TRUE)
 ```
 
