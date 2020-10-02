@@ -27,7 +27,7 @@ Note that this analysis:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE,cache=TRUE,
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, warning=FALSE, message=FALSE,
                       cache.path = "cache/normalise_Ssd1_CRAC_counts-",
                       fig.path = "figure/normalise_Ssd1_CRAC_counts-")
 
@@ -59,6 +59,29 @@ gene_from_attr <- function(attr_string,
         str_extract(match_str) %>%
         str_remove(before) %>%
         str_remove(after)
+}
+
+scientific_10 <- function(x) {
+    xout <- gsub("1e", "10^{", format(x),fixed=TRUE)
+    xout <- gsub("{-0", "{-", xout,fixed=TRUE)
+    xout <- gsub("{+", "{", xout,fixed=TRUE)
+    xout <- gsub("{0", "{", xout,fixed=TRUE)
+    xout <- paste(xout,"}",sep="")
+    return(parse(text=xout))
+}
+
+scale_x_log10_sci <- function(name=waiver(),omag=seq(-10,20),...) {
+    breaks10 <- 10^omag
+    scale_x_log10(name,breaks=breaks10,labels=scientific_10(breaks10),...)
+}
+
+scale_y_log10_sci <- function(name=waiver(),omag=seq(-10,20),...) {
+    breaks10 <- 10^omag
+    scale_y_log10(name,breaks=breaks10,labels=scientific_10(breaks10),...)
+}
+
+scale_loglog <- function(...) {
+    list(scale_x_log10_sci(...),scale_y_log10_sci(...))
 }
 ```
 
@@ -221,6 +244,10 @@ tpm_join_bycondition <-
               suffix=c(".RNA",".Ssd1")) %>%
   mutate(ratio.Ssd1.RNA = TPM.mean.Ssd1/TPM.mean.RNA) %>%
   left_join(scer_mrna_prot %>% select(Gene,Name)) %>%
+  mutate(Condition = factor(Condition,
+                            levels = c("30","42"),
+                            labels = c("30°C","42°C"))
+  ) %>%
   select(Gene,Name,Condition,
          TPM.RNA=TPM.mean.RNA,TPM.Ssd1=TPM.mean.Ssd1,
          ratio.Ssd1.RNA)
@@ -237,21 +264,21 @@ tpm_join_bycondition
 ```{r plot_Ssd1_vs_RNA_labels,dependson="mean_join_tpm",fig.height=3.2,fig.width=6}
 ggplot(data=tpm_join_bycondition,aes(x=TPM.RNA,y=TPM.Ssd1)) +
   geom_point(size=0.2,colour="grey50") +
-  ggrepel::geom_text_repel(data=
-                             tpm_join_bycondition %>%
-                             filter(TPM.RNA > 10000 | TPM.Ssd1 > 10000 | 
-                                      (ratio.Ssd1.RNA > 50 & TPM.Ssd1 > 500) ),
-                           aes(label=Name),size=2,
-                           label.padding=0.02,segment.size=0.1,
-                           force=0.1) + 
-  scale_x_log10("RNA-seq density (TPM)",
+  ggrepel::geom_text_repel(
+    data=
+      tpm_join_bycondition %>%
+      filter(TPM.RNA > 10000 | TPM.Ssd1 > 10000 | 
+               (ratio.Ssd1.RNA > 50 & TPM.Ssd1 > 500) ),
+    aes(label=Name),size=2,
+    label.padding=0.02,segment.size=0.1,force=0.1,
+    # set random number seed so the labels go in the same place every time
+    seed = 42) + 
+  scale_x_log10_sci("RNA-seq density (TPM)",
                 limits=c(5,max(tpm_join_bycondition$TPM.RNA)),
                 oob=scales::squish,expand=c(0.01,0.01)) +
-  scale_y_log10("Ssd1 CRAC density (TPM)",
+  scale_y_log10_sci("Ssd1 CRAC density (TPM)",
                 limits=c(5,max(tpm_join_bycondition$TPM.Ssd1)),
-                oob=scales::squish,expand=c(0.01,0.01),
-                breaks=c(10,100,1000,10000,100000),
-                labels=c("10","100","1000","10000","100000")) +
+                oob=scales::squish,expand=c(0.01,0.01)) +
   facet_wrap(~Condition)
 ```
 
@@ -261,11 +288,11 @@ These are familiar: TOS1, TOS6, SUN4/SIM1/UTH1/SRL1, etc.
 
 ```{r enrich_Ssd1_vs_RNA,dependson="mean_join_tpm",results.show=TRUE}
 tpm_join_bycondition %>%
-  filter(Condition=="30",TPM.RNA > 20) %>%
+  filter(Condition=="30°C",TPM.RNA > 20) %>%
   arrange(desc(ratio.Ssd1.RNA))
 
 tpm_join_bycondition %>%
-  filter(Condition=="42",TPM.RNA > 20) %>%
+  filter(Condition=="42°C",TPM.RNA > 20) %>%
   arrange(desc(ratio.Ssd1.RNA))
 ```
 
@@ -275,19 +302,21 @@ tpm_join_bycondition %>%
 ```{r enrich_Ssd1_vs_RNA_out,dependson="mean_join_tpm",results.show=TRUE}
 Ssd1_targets_TPMratio5x_30C <- 
   tpm_join_bycondition %>%
-  filter(Condition=="30",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
+  filter(Condition=="30°C",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
   arrange(desc(ratio.Ssd1.RNA)) 
 
 write_tsv(x = Ssd1_targets_TPMratio5x_30C %>%
+            select(-Condition) %>%
             mutate_if(is.numeric, round, digits = 3),
           path="../results/Ssd1_targets_TPMratio5x_30C.txt")
 
 Ssd1_targets_TPMratio5x_42C <- 
   tpm_join_bycondition %>%
-  filter(Condition=="42",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
+  filter(Condition=="42°C",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
   arrange(desc(ratio.Ssd1.RNA))
 
 write_tsv(x = Ssd1_targets_TPMratio5x_42C %>%
+            select(-Condition) %>%
             mutate_if(is.numeric, round, digits = 3),
           path="../results/Ssd1_targets_TPMratio5x_42C.txt")
 ```
@@ -304,7 +333,7 @@ Ssd1_targets_TPMratio5x_42C %>%
 
 ```{r highest_42C,dependson="mean_join_tpm"}
 tpm_join_bycondition %>%
-  filter(Condition=="42") %>%
+  filter(Condition=="42°C") %>%
   arrange(desc(TPM.RNA))
 ```
 
@@ -314,7 +343,7 @@ These,e.g. Hsp104, aren't enriched in Ssd1 binding.
 
 ```{r highest_42C_ssd1_2x,dependson="mean_join_tpm"}
 tpm_join_bycondition %>%
-  filter(Condition=="42",ratio.Ssd1.RNA > 2) %>%
+  filter(Condition=="42°C",ratio.Ssd1.RNA > 2) %>%
   arrange(desc(TPM.RNA))
 ```
 
@@ -369,17 +398,17 @@ ggplot(data=tpm_join_bycondition,aes(x=TPM.RNA,y=TPM.Ssd1)) +
     data = left_join(select_genetype_df,
                      tpm_join_bycondition),
     aes(label=Name,colour=GType),
-    size=2.5,segment.size=0.1,force=0.1) + 
+    size=2.5,segment.size=0.1,force=0.15,min.segment.length=0.2,
+    # set random number seed so the labels go in the same place every time
+    seed = 41) + 
   scale_colour_gtype + theme(legend.position = "none") + 
-  scale_x_log10("RNA-seq density (TPM)",
+  scale_x_log10_sci("RNA-seq density (TPM)",
                 limits=c(5,max(tpm_join_bycondition$TPM.RNA)),
                 oob=scales::squish,expand=c(0.01,0.01)) +
-  scale_y_log10("Ssd1 CRAC density (TPM)",
+  scale_y_log10_sci("Ssd1 CRAC density (TPM)",
                 limits=c(5,max(tpm_join_bycondition$TPM.Ssd1)),
-                oob=scales::squish,expand=c(0.01,0.01),
-                breaks=c(10,100,1000,10000,100000),
-                labels=c("10","100","1000","10000","100000")) +
-  facet_wrap(~Condition)
+                oob=scales::squish,expand=c(0.01,0.01)) +
+  facet_wrap(~Condition,scales="free_y")
 plot_Ssd1_vs_RNA_colourlabels
 
 ggsave("../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf",
