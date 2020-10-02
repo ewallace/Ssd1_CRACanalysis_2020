@@ -98,14 +98,14 @@ def runPyReadCountersBlocksNoMuts(inputfile,outputfile,alignfiletype="sam"):
 	
 def makeCoverageSgrFiles(inputfile,outputfiles):
 	""" takes the pyReadCounters gtf output files and generates coverage sgr files """
-	outputfile = re.search("(.*)_plus_strand_reads.sgr",outputfiles[0]).group(1)
+	outputfile = re.search("(.*)_plus.sgr",outputfiles[0]).group(1)
 	cmd = "pyGTF2sgr.py --gtf '%s' --zeros --count -v -o '%s' -c '%s'" % (inputfile,outputfile,args.chromosome)
 	logger.info(cmd)
 	os.system(cmd)
 		
 def makeCoverageBedgraphFiles(inputfile,outputfiles):
 	""" takes the pyReadCounters gtf output files and generates bedgraph files for viewing of the data in genome browsers """
-	outputfile = re.search("(.*)_plus_strand_reads.bedgraph",outputfiles[0]).group(1)
+	outputfile = re.search("(.*)_plus.bedgraph",outputfiles[0]).group(1)
 	cmd = "pyGTF2bedGraph.py --gtf '%s' --count -v --permillion -o '%s' -c '%s'" % (inputfile,outputfile,args.chromosome)
 	logger.info(cmd)
 	os.system(cmd)
@@ -170,6 +170,15 @@ def runMultiCovTranscript(inputfiles,outputfile):
 	logger.info(cmd)
 	os.system(cmd)
 
+def makeGenomeCoverageBedgraph(inputfile,outputfiles):
+	""" takes the sorted indexed bam files and generates bedgraph files for viewing of the data in genome browsers """
+	outputfile = re.search("(.*)_plus.bedgraph",outputfiles[0]).group(1)
+	cmdplus = "genomeCoverageBed -bg -strand + -ibam %s > %s" % (inputfile,outputfiles[0])
+	logger.info(cmdplus)
+	os.system(cmdplus)
+	cmdminus = "genomeCoverageBed -bg -strand - -ibam %s > %s" % (inputfile,outputfiles[1])
+	logger.info(cmdminus)
+	os.system(cmdminus)
 
 ### checking if dependencies are installed
 
@@ -279,7 +288,7 @@ pipeline.transform(task_func = runPyReadCountersBlocksNoMuts,
 pipeline.subdivide(task_func = makeCoverageBedgraphFiles,
 					input  = runPyReadCountersBlocksNoMuts,
 					filter = formatter("^.+/([^/]+)_count_output_cDNAs.gtf"),
-					output = ["%s/bedgraph_files/{1[0]}_plus_strand_reads.bedgraph" % root_dir,"%s/bedgraph_files/{1[0]}_minus_strand_reads.bedgraph" % root_dir]
+					output = ["%s/bedgraph_files/{1[0]}_plus.bedgraph" % root_dir,"%s/bedgraph_files/{1[0]}_minus.bedgraph" % root_dir]
 				).follows(pipeline.mkdir(os.path.join(root_dir,"bedgraph_files"))).follows(runPyReadCountersBlocksNoMuts)
 
 logger.info("Making bedgraph files")
@@ -313,6 +322,12 @@ if args.transcriptgff:
 						input  = sortBamFiles,
 						output = "%s/multicov_analyses/allsample_transcriptcounts.txt" % root_dir,
 					).follows(pipeline.mkdir(os.path.join(root_dir,"multicov_analyses"))).follows(indexBamFiles)
+
+pipeline.subdivide(task_func = makeGenomeCoverageBedgraph,
+					input  = sortBamFiles,
+					filter = formatter("^.+/([^/]+).bam"),
+					output = ["%s/bedgraph_genomecov/{1[0]}_plus.bedgraph" % root_dir,"%s/bedgraph_genomecov/{1[0]}_minus.bedgraph" % root_dir]
+				).follows(pipeline.mkdir(os.path.join(root_dir,"bedgraph_genomecov"))).follows(indexBamFiles)
 
 ### print out flowchart describing pipeline
 pipeline_printout_graph("%s/flowchart.jpg" %root_dir)
