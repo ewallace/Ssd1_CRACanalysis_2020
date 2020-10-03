@@ -198,7 +198,7 @@ bgall <- bind_rows(
 ### Load genome feature file
 
 ```{r load_gff}
-gff_Sc <- read_gff("~/Repos/yeastutrgff/out/gff_ncRNAs_abundantverifiedmRNAparts.gff") %>%
+gff_Sc <- read_gff("../input_annotation/gff_ncRNAs_abundantverifiedmRNAparts.gff") %>%
   mutate(ID = str_extract(attr,"ID=[A-Za-z0-9-_]+") %>%
            str_remove("ID="), 
          Parent = str_extract(attr,"Parent=[A-Za-z0-9-_]+")%>%
@@ -211,6 +211,8 @@ gff_Sc <- read_gff("~/Repos/yeastutrgff/out/gff_ncRNAs_abundantverifiedmRNAparts
 ## Plot 8 top Ssd1 targets
 
 SUN4, SIM1, UTH1, SCW4, CTS1, DSE2, CCW12, SRL1.
+
+All oriented with 5'UTR on the left, plotted in chromosomal co-ordinates.
 
 ```{r plot_8genes,dependson=c("load_bedgraph","load_gff","plot_functions"),fig.height=6,fig.width=6,units="in"}
 
@@ -246,7 +248,8 @@ SRL1_bg <-
            gff=gff_Sc,gene="YOR247W", ptitle="SRL1",pad=300)
 
 plot_8genes <- 
-  plot_grid(SUN4_bg,SIM1_bg,UTH1_bg,SCW4_bg,CTS1_bg,DSE2_bg,CCW12_bg, SRL1_bg,ncol = 2)
+  plot_grid(SUN4_bg,SIM1_bg,UTH1_bg,SCW4_bg,CTS1_bg,DSE2_bg,CCW12_bg,SRL1_bg,
+            ncol = 2)
 
 plot_8genes
 
