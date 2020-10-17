@@ -83,6 +83,14 @@ scale_y_log10_sci <- function(name=waiver(),omag=seq(-10,20),...) {
 scale_loglog <- function(...) {
     list(scale_x_log10_sci(...),scale_y_log10_sci(...))
 }
+
+ggpairs_genewise <- function(...) {
+  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ),
+           upper = list(continuous = wrap("cor",stars = FALSE), 
+                        combo = "box_no_facet", discrete = "count", 
+                        na ="na"),
+           ...)
+}
 ```
 
 # Inspecting RNA-seq count data
@@ -118,21 +126,31 @@ tpms_RNA_stranded <-  counts_RNA_stranded %>%
 
 ## Scatter plot shows genewise CPMS are VERY reproducible
 
-```{r scatter_RNAseq_cpm,dependson="load_RNAseq_count",fig.height=8,fig.width=8}
+```{r scatter_RNAseq_cpm,dependson="load_RNAseq_count",fig.height=7,fig.width=7}
 counts_RNA_stranded %>%
   select(RNA_A_30,RNA_B_30,RNA_C_GE,RNA_D_GE,RNA_E_42,RNA_F_42) %>%
   mutate_all(calc_cpm) %>%
   mutate_all(log10plusepsilon) %>%
-  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+  ggpairs_genewise()
 ```
 
 ## Scatter plot shows genewise TPMs are likewise very reproducible
 
-```{r scatter_RNAseq_tpm,dependson="load_RNAseq_count",fig.height=8,fig.width=8}
+```{r scatter_RNAseq_tpm_all,dependson="load_RNAseq_count",fig.height=7,fig.width=7}
 tpms_RNA_stranded %>%
   select(RNA_A_30,RNA_B_30,RNA_C_GE,RNA_D_GE,RNA_E_42,RNA_F_42) %>%
   mutate_all(log10plusepsilon,epsilon=1) %>%
-  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+  ggpairs_genewise()
+```
+
+```{r scatter_RNAseq_tpm,dependson="load_RNAseq_count",fig.height=4.5,fig.width=4.5}
+tpms_RNA_stranded %>%
+  select("RNA rep A\n30°C" = RNA_A_30,
+         "RNA rep B\n30°C" = RNA_B_30,
+         "RNA rep A\n42°C" = RNA_E_42,
+         "RNA rep B\n42°C" = RNA_F_42) %>%
+  mutate_all(log10plusepsilon,epsilon=1) %>%
+  ggpairs_genewise()
 ```
 
 
@@ -168,12 +186,12 @@ counts_Ssd1_stranded
 
 ## Ssd1-bound genewise CPMs are reproducible
 
-```{r scatter_Ssd1_cpm,dependson="load_Ssd1_count",fig.height=7,fig.width=7}
+```{r scatter_Ssd1_cpm,dependson="load_Ssd1_count",fig.height=5,fig.width=5}
 counts_Ssd1_stranded %>%
   select(Ssd1_3_30,Ssd1_4_30,Ssd1_3_42,Ssd1_4_42,BY4741) %>%
   mutate_all(calc_cpm) %>%
   mutate_all(log10plusepsilon,epsilon=100) %>%
-  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+  ggpairs_genewise()
 ```
 
 This is not as good, due to relatively low coverage of deduplicated reads.
@@ -182,11 +200,15 @@ This is not as good, due to relatively low coverage of deduplicated reads.
 
 Here transform TPMs by `log10(tpm + 10)`, where the `+ 10` smooths away some of the low-count noise.
 
-```{r scatter_Ssd1_tpm,dependson="load_Ssd1_count",fig.height=7,fig.width=7}
+```{r scatter_Ssd1_tpm,dependson="load_Ssd1_count",fig.height=5.2,fig.width=5.2}
 tpms_Ssd1_stranded %>%
-  select(Ssd1_3_30,Ssd1_4_30,Ssd1_3_42,Ssd1_4_42,BY4741) %>%
+  select("Ssd1-HTP (3)\n30°C" = Ssd1_3_30,
+         "Ssd1-HTP (4)\n30°C" = Ssd1_4_30,
+         "Ssd1-HTP (3)\n42°C" = Ssd1_3_42,
+         "Ssd1-HTP (4)\n42°C" = Ssd1_4_42,
+         "WT (BY4741)\n30°C" = BY4741) %>%
   mutate_all(log10plusepsilon,epsilon=10) %>%
-  ggpairs( lower = list(continuous = wrap("points", size=0.2,colour="grey50") ) )
+  ggpairs_genewise()
 ```
 
 
