@@ -1,12 +1,14 @@
 ---
-title: "Pileup Plots in R, for Ssd1 analysis"
+title: "Pileup Plots, for Ssd1 analysis"
 author: "Edward Wallace"
-date: "28 September 2020"
+date: "17 Oct 2020"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache= TRUE,
+                      cache.path = "cache/pileup_Ssd1-",
+                      fig.path = "figure/pileup_Ssd1-")
 library(ggplot2)
 library(readr)
 library(tidyr)
@@ -14,14 +16,14 @@ library(dplyr)
 library(forcats)
 library(stringr)
 library(cowplot)
-theme_set(theme_cowplot(font_size = 10) + 
+theme_set(theme_cowplot(font_size = 11) + 
               theme(strip.background = element_blank()) 
           )
 ```
 
 ## Summary
 
-Pileup plots for Ssd1 CRAC data. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the `CNYUCNYU` Ssd1-enriched element in those transcripts.
+Pileup plots for Ssd1 CRAC data. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the `CNYUCNYU` Ssd1-enriched element in those transcripts, and the `CCAACU` upstream motif.
 
 ## Functions for data loading and plotting
 
@@ -119,6 +121,32 @@ position_locate_all <- function(posdf,
         stringr::str_locate_all(pattern) %>%
         .[[1]]
 }
+
+SEE_colour    <- "#2b9744"
+CCAACU_colour <- "#3fa6b0"
+
+geom_motifhighlightpt <- function(...) {
+    geom_point(y=0, aes(x=mid), colour = SEE_colour, size = 3, shape = 17, vjust = 1,
+               ...)
+}
+
+annotate_motifhighlightsegment <- function(mid,halfwidth=3.5) {
+    annotate(y=0, yend = 0, x = mid-halfwidth, xend=mid+halfwidth,
+             geom="segment", colour = SEE_colour, size = 2)
+}
+
+annotate_motifhighlight <- function(mid,...) {
+    annotate(geom="text", size = 3, y = 0, x = mid, vjust = 0.9, fontface = "bold",
+             ...)
+}
+
+annotate_SEE <- function(mid, ...) {
+    annotate_motifhighlight(mid, label = "m", colour = SEE_colour, ...)
+}
+
+annotate_CCAACU <- function(mid, ...) {
+    annotate_motifhighlight(mid, label = "u", colour = CCAACU_colour, ...)
+}
 ```
 
 ## Load just one data set for example analysis
@@ -151,8 +179,6 @@ SUN4_5UTRwide_plot
 ## Plot pileup focus on SUN4 5'UTR, restricted to "SUN4_duo" vicinity
 
 ```{r plot_SUN4dualSEE,dependson = c("pileup_functions","load_onetable"),fig.height = 1, fig.width=6}
-# setwd("Downloads/pyPileup_analyses/")
-
 SUN4dual_df <- filter(Ssd1_3_30_df, 
                       target == "SUN4", 
                       position >= 127, 
@@ -167,12 +193,12 @@ ggsave(plot = SUN4_5dual_plot, filename = "SUN4_5dual_3_30_plot.pdf",
        height = 1, width=6, device = "pdf")
 ```
 
-## Find all SEE positions in transcripts
+## Plot pileups centred only on Ssd1-enriched motifs
 
 Plot pileup on same area surrounding the SEE motifs (-12, +2) to look for consistent location of crosslinking sites.
 
-```{r fig.height = 8, fig.width = 8}
-SEE_positions <- position_locate_all(Ssd1_3_30_df) %>%
+```{r SEE_positions_all,dependson = c("pileup_functions","load_onetable"),fig.height = 8, fig.width = 8}
+SEE_positions_all <- position_locate_all(Ssd1_3_30_df) %>%
     as_tibble() %>%
     mutate(motifid = 1:nrow(.))
 
@@ -181,21 +207,13 @@ get_chunk <- function(sedf,datadf) {
 }
 
 SEE_motif_pileups <- 
-    SEE_positions[-1,] %>%
+    SEE_positions_all[-1,] %>%
     mutate(start = start - 12, end=end + 2) %>%
     group_by(motifid) %>%
     do(get_chunk(., datadf = Ssd1_3_30_df)) %>%
     mutate(motifidg = paste(target, motifid),
            maxhits = max(hits)) %>%
     filter(maxhits > 150)
-
-# plot_pileup_one(SEE_motif_pileups,
-#                 include = "allsubdel") + 
-#     facet_wrap( ~ motifidg,scales = "free")  +
-#             theme(axis.title.x =  element_blank(),
-#                   axis.line.x = element_blank(),
-#                   axis.text.x = element_blank(),
-#                   axis.ticks.x = element_blank()) 
 
 SEE_motif_pileups %>%
     do(plot = plot_pileup_one(.,include = "allsubdel",
@@ -207,7 +225,24 @@ SEE_motif_pileups %>%
 # SEE_motifs
 ```
 
-We conclude that we are likely to detect crosslinking by apparent deletions in U-rich regions 1-4nt upstream of CNYUCNYU. However, because htese are often U(4), or in some cases (CU)(2), the data do not tell us exactly which nucleotide position is crosslinked.
+We are likely to detect crosslinking by apparent deletions in U-rich regions 1-4nt upstream of CNYUCNYU. However, because these are often U(4), or in some cases (CU)(2), the data do not tell us exactly which nucleotide position is crosslinked.
+
+## Find SEE motif positions separately for each transcript
+
+```{r SEE_positions_bytx,dependson = c("pileup_functions","load_onetable"),fig.height = 8, fig.width = 8}
+SEE_positions_bytx <- Ssd1_3_30_df %>%
+    group_by(target) %>%
+    do(., position_locate_all(.) %>% as_tibble() ) %>%
+    mutate(mid = start + 3.5)
+SEE_positions_bytx
+
+
+CCAACU_positions_bytx <- Ssd1_3_30_df %>%
+    group_by(target) %>%
+    do(., position_locate_all(.,pattern = "CCAACU") %>% as_tibble() ) %>%
+    mutate(mid = start + 2.5)
+CCAACU_positions_bytx
+```
 
 ## Load pileup data from all four Ssd1 CRAC samples
 
@@ -245,17 +280,19 @@ Ssd1_allsamples_df
 SUN4_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
                          target == "SUN4", 
                          position >= 81, 
-                         position <= 231)
+                         position <= 230)
 
 SUN4_5UTRwiderep_plot <- 
     plot_pileup_one(SUN4_5UTRwiderep_df, include = "allsubdel") + 
     facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
-    labs(title = "SUN4 5'UTR peak", x = "position from TSS")
+    labs(title = "SUN4 5'UTR peak", x = "position from TSS")  +
+    annotate_SEE(filter(SEE_positions_bytx,target=="SUN4",mid < 230)$mid) +
+    annotate_CCAACU(filter(CCAACU_positions_bytx,target=="SUN4",mid < 230)$mid)
 SUN4_5UTRwiderep_plot
 
-ggsave(plot = SUN4_5UTRwiderep_plot, 
-       filename = "SUN4_5dual_reproducible_plot.pdf",
-       height = 4, width = 6, device = "pdf")
+# ggsave(plot = SUN4_5UTRwiderep_plot, 
+#        filename = "SUN4_5dual_reproducible_plot.pdf",
+#        height = 4, width = 6, device = "pdf")
 ```
 
 ## Plot pileup on UTH1 5'UTR to show reproducibility
@@ -264,17 +301,19 @@ ggsave(plot = SUN4_5UTRwiderep_plot,
 UTH1_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
                          target == "UTH1", 
                          position >= 1, 
-                         position <= 250)
+                         position <= 300)
 
 UTH1_5UTRwiderep_plot <- 
     plot_pileup_one(UTH1_5UTRwiderep_df, include = "allsubdel") + 
     facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
-    labs(title = "UTH1 5'UTR peaks", x = "position from TSS")
+    labs(title = "UTH1 5'UTR peaks", x = "position from TSS") +
+    annotate_SEE(filter(SEE_positions_bytx,target=="UTH1",mid < 300)$mid) +
+    annotate_CCAACU(filter(CCAACU_positions_bytx,target=="UTH1",mid < 300)$mid)
 UTH1_5UTRwiderep_plot
 
-ggsave(plot = UTH1_5UTRwiderep_plot, 
-       filename = "UTH1_5wide_reproducible_plot.pdf",
-       height = 4, width = 6, device = "pdf")
+# ggsave(plot = UTH1_5UTRwiderep_plot, 
+#        filename = "UTH1_5wide_reproducible_plot.pdf",
+#        height = 4, width = 6, device = "pdf")
 ```
 
 ## Plot focused on UTH1 CNYUCNYU vicinity
@@ -287,12 +326,12 @@ UTH1_5UTRwideone_plot <-
     theme(legend.position = c(0.9,0.7))
 UTH1_5UTRwideone_plot
 
-ggsave(plot = UTH1_5UTRwideone_plot, 
-       filename = "UTH1_5wide_3_30_plot.pdf",
-       height = 2, width = 12, device = "pdf")
+# ggsave(plot = UTH1_5UTRwideone_plot, 
+#        filename = "UTH1_5wide_3_30_plot.pdf",
+#        height = 2, width = 12, device = "pdf")
 ```
 
-## Plot pileup on SUN4 5'UTR to show reproducibility
+## Plot pileup on SRL1 5'UTR to show reproducibility
 
 ```{r plot_SRL1_reproducibility}
 SRL1_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
@@ -303,12 +342,14 @@ SRL1_5UTRwiderep_df <- filter(Ssd1_allsamples_df,
 SRL1_5UTRwiderep_plot <- 
     plot_pileup_one(SRL1_5UTRwiderep_df, include = "allsubdel") + 
     facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
-    labs(title = "SRL1 5'UTR peaks", x = "position from TSS")
+    labs(title = "SRL1 5'UTR peaks", x = "position from TSS") +
+    annotate_SEE(filter(SEE_positions_bytx,target=="SRL1",mid < 300)$mid) +
+    annotate_CCAACU(filter(CCAACU_positions_bytx,target=="SRL1",mid < 300)$mid)
 SRL1_5UTRwiderep_plot
 
-ggsave(plot = SRL1_5UTRwiderep_plot, 
-       filename = "SRL1_5wide_reproducible_plot.pdf",
-       height = 4, width = 6, device = "pdf")
+# ggsave(plot = SRL1_5UTRwiderep_plot, 
+#        filename = "SRL1_5wide_reproducible_plot.pdf",
+#        height = 4, width = 6, device = "pdf")
 ```
 
 ## Plot focused on SRL1 CNYUCNYU vicinities - there are two
@@ -322,10 +363,6 @@ SRL1_5UTRupone_plot <-
     theme(legend.position = c(0.3,0.7))
 SRL1_5UTRupone_plot
 
-ggsave(plot = SRL1_5UTRupone_plot, 
-       filename = "SRL1_5up_3_30_plot.pdf",
-       height = 2, width = 12, device = "pdf")
-
 SRL1_5UTRdownone_plot <- 
     filter(SRL1_5UTRwiderep_df, Sample == "3_30" ) %>%
     plot_pileup_one(include = "allsubdel",nucseq = TRUE) + 
@@ -333,10 +370,67 @@ SRL1_5UTRdownone_plot <-
     labs(title = "SRL1 5'UTR peaks, 30C rep A", x = "position from TSS") + 
     theme(legend.position = "none")
 SRL1_5UTRdownone_plot
+```
 
-ggsave(plot = SRL1_5UTRdownone_plot, 
-       filename = "SRL1_5down_3_30_plot.pdf",
-       height = 2, width = 12, device = "pdf")
+
+## Plot pileup on CCW12 5'UTR to show reproducibility
+
+```{r plot_CCW12_reproducibility}
+CCW12_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
+                         target == "CCW12", 
+                         position >= 1, 
+                         position <= 300)
+
+CCW12_5UTRwiderep_plot <- 
+    plot_pileup_one(CCW12_5UTRwiderep_df, include = "allsubdel") + 
+    facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
+    labs(title = "CCW12 5'UTR peaks", x = "position from TSS") +
+    annotate_SEE(filter(SEE_positions_bytx,target=="CCW12",mid < 250)$mid) +
+    annotate_CCAACU(filter(CCAACU_positions_bytx,target=="CCW12",mid < 300)$mid)
+CCW12_5UTRwiderep_plot
+
+# ggsave(plot = CCW12_5UTRwiderep_plot, 
+#        filename = "CCW12_5wide_reproducible_plot.pdf",
+#        height = 4, width = 6, device = "pdf")
+```
+
+## Plot pileup on SCW4 5'UTR to show reproducibility
+
+```{r plot_SCW4_reproducibility}
+SCW4_5UTRwiderep_df <- filter(Ssd1_allsamples_df, 
+                         target == "SCW4", 
+                         position >= 1, 
+                         position <= 300)
+
+SCW4_5UTRwiderep_plot <- 
+    plot_pileup_one(SCW4_5UTRwiderep_df, include = "allsubdel") + 
+    facet_wrap(~SampleNice, ncol = 1, scales = "free_y") + 
+    labs(title = "SCW4 5'UTR peaks", x = "position from TSS") +
+    annotate_SEE(filter(SEE_positions_bytx,target=="SCW4",mid < 250)$mid) +
+    annotate_CCAACU(filter(CCAACU_positions_bytx,target=="SCW4",mid < 300)$mid)
+SCW4_5UTRwiderep_plot
+
+# ggsave(plot = SCW4_5UTRwiderep_plot, 
+#        filename = "SCW4_5wide_reproducible_plot.pdf",
+#        height = 4, width = 6, device = "pdf")
+```
+
+## Composite plot
+
+```{r pileup_plot_reproducible_4genes, fig.width=7, fig.height=7}
+theme_5UTR_grid <-  theme(legend.position="none",
+                          axis.ticks.length = unit(5,"pt") )
+pileup_plot_reproducible_4genes <-
+    plot_grid(SUN4_5UTRwiderep_plot + theme_5UTR_grid, 
+          SCW4_5UTRwiderep_plot + theme_5UTR_grid, 
+          UTH1_5UTRwiderep_plot + theme_5UTR_grid, 
+          SRL1_5UTRwiderep_plot + theme_5UTR_grid
+          )
+pileup_plot_reproducible_4genes
+
+ggsave(plot = pileup_plot_reproducible_4genes, 
+       filename = "pileup_plot_reproducible_4genes.pdf",
+       height = 7, width = 7, device = "pdf")
 ```
 
 
