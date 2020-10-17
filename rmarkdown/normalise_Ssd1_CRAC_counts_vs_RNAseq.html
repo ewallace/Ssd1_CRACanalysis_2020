@@ -387,12 +387,12 @@ summary {
 </ul></li>
 <li><a href="#plot-tpms-by-condition-ssd1-bound-vs-rna-with-some-labels">Plot TPMs by condition, Ssd1-bound vs RNA, with some labels</a></li>
 <li><a href="#ssd1-enriched-genes-by-crude-tpm-ratios">Ssd1-enriched genes by crude TPM ratios</a><ul>
-<li><a href="#make-output-files-for-ssd1-enriched-genes-over-5x">Make output files for Ssd1-enriched genes over 5x</a></li>
+<li><a href="#make-output-files-for-ssd1-enriched-genes-over-4x">Make output files for Ssd1-enriched genes over 4x</a></li>
 </ul></li>
 <li><a href="#which-genes-are-enriched-at-42c-not-30c">Which genes are enriched at 42C not 30C?</a></li>
+<li><a href="#which-genes-are-enriched-at-30c-not-42c">Which genes are enriched at 30C not 42C?</a></li>
 <li><a href="#the-highest-expressed-genes-at-42c-are-not-enriched-in-ssd1-binding">The highest-expressed genes at 42C are not enriched in Ssd1 binding</a></li>
 <li><a href="#highly-expressed-genes-at-42c-over-2x-enriched-in-ssd1-binding">Highly-expressed genes at 42C <em>over 2x</em> enriched in Ssd1 binding</a></li>
-<li><a href="#gpi-anchored-cell-wall-proteins">GPI-anchored cell wall proteins</a></li>
 <li><a href="#plot-tpms-by-condition-select-genes-labeled">Plot TPMs by condition, select genes labeled</a></li>
 </ul></li>
 </ul>
@@ -685,48 +685,68 @@ tpm_join_bycondition &lt;-
 ##  9 YGR279C   SCW4  42°C        201.     3322.           16.5
 ## 10 YKL096W-A CWP2  42°C       1754.    28365.           16.2
 ## # … with 3,872 more rows</code></pre>
-<div id="make-output-files-for-ssd1-enriched-genes-over-5x" class="section level3">
-<h3>Make output files for Ssd1-enriched genes over 5x</h3>
-<pre class="r"><code>Ssd1_targets_TPMratio5x_30C &lt;- 
+<div id="make-output-files-for-ssd1-enriched-genes-over-4x" class="section level3">
+<h3>Make output files for Ssd1-enriched genes over 4x</h3>
+<pre class="r"><code>Ssd1_targets_TPMratio4x_30C &lt;- 
   tpm_join_bycondition %&gt;%
-  filter(Condition==&quot;30°C&quot;,TPM.RNA &gt; 20, ratio.Ssd1.RNA &gt; 5) %&gt;%
+  filter(Condition==&quot;30°C&quot;,TPM.RNA &gt; 20, ratio.Ssd1.RNA &gt; 4) %&gt;%
   arrange(desc(ratio.Ssd1.RNA)) 
 
-write_tsv(x = Ssd1_targets_TPMratio5x_30C %&gt;%
+write_tsv(x = Ssd1_targets_TPMratio4x_30C %&gt;%
             select(-Condition) %&gt;%
             mutate_if(is.numeric, round, digits = 3),
-          path=&quot;../results/Ssd1_targets_TPMratio5x_30C.txt&quot;)
+          path=&quot;../results/Ssd1_targets_TPMratio4x_30C.txt&quot;)
 
-Ssd1_targets_TPMratio5x_42C &lt;- 
+Ssd1_targets_TPMratio4x_42C &lt;- 
   tpm_join_bycondition %&gt;%
-  filter(Condition==&quot;42°C&quot;,TPM.RNA &gt; 20, ratio.Ssd1.RNA &gt; 5) %&gt;%
+  filter(Condition==&quot;42°C&quot;,TPM.RNA &gt; 20, ratio.Ssd1.RNA &gt; 4) %&gt;%
   arrange(desc(ratio.Ssd1.RNA))
 
-write_tsv(x = Ssd1_targets_TPMratio5x_42C %&gt;%
+write_tsv(x = Ssd1_targets_TPMratio4x_42C %&gt;%
             select(-Condition) %&gt;%
             mutate_if(is.numeric, round, digits = 3),
-          path=&quot;../results/Ssd1_targets_TPMratio5x_42C.txt&quot;)</code></pre>
+          path=&quot;../results/Ssd1_targets_TPMratio4x_42C.txt&quot;)</code></pre>
 </div>
 </div>
 <div id="which-genes-are-enriched-at-42c-not-30c" class="section level2">
 <h2>Which genes are enriched at 42C not 30C?</h2>
-<pre class="r"><code>Ssd1_targets_TPMratio5x_42C %&gt;% 
-  filter(! Gene %in% Ssd1_targets_TPMratio5x_30C$Gene)</code></pre>
-<pre><code>## # A tibble: 23 x 6
-## # Groups:   Gene [23]
+<pre class="r"><code>Ssd1_targets_TPMratio4x_42C %&gt;% 
+  filter(! Gene %in% Ssd1_targets_TPMratio4x_30C$Gene)</code></pre>
+<pre><code>## # A tibble: 33 x 6
+## # Groups:   Gene [33]
 ##    Gene      Name  Condition TPM.RNA TPM.Ssd1 ratio.Ssd1.RNA
 ##    &lt;chr&gt;     &lt;chr&gt; &lt;fct&gt;       &lt;dbl&gt;    &lt;dbl&gt;          &lt;dbl&gt;
 ##  1 YKL096W-A CWP2  42°C       1754.    28365.          16.2 
 ##  2 YOL026C   MIM1  42°C        110.     1179.          10.7 
 ##  3 YNL283C   WSC2  42°C         39.5     393.           9.95
-##  4 YGL029W   CGR1  42°C         25.8     250.           9.69
-##  5 YLR297W   &lt;NA&gt;  42°C         28.3     274.           9.66
-##  6 YFR017C   IGD1  42°C        167.     1485.           8.91
-##  7 YNL197C   WHI3  42°C         44.7     370.           8.29
-##  8 YDR309C   GIC2  42°C         51.0     364.           7.13
-##  9 YML041C   VPS71 42°C         32.4     223.           6.86
-## 10 YPR138C   MEP3  42°C         35.2     238.           6.76
-## # … with 13 more rows</code></pre>
+##  4 YLR297W   &lt;NA&gt;  42°C         28.3     274.           9.66
+##  5 YFR017C   IGD1  42°C        167.     1485.           8.91
+##  6 YDR309C   GIC2  42°C         51.0     364.           7.13
+##  7 YML041C   VPS71 42°C         32.4     223.           6.86
+##  8 YPR138C   MEP3  42°C         35.2     238.           6.76
+##  9 YER039C   HVG1  42°C         28.1     188.           6.69
+## 10 YOR178C   GAC1  42°C         35.8     236.           6.59
+## # … with 23 more rows</code></pre>
+</div>
+<div id="which-genes-are-enriched-at-30c-not-42c" class="section level2">
+<h2>Which genes are enriched at 30C not 42C?</h2>
+<pre class="r"><code>Ssd1_targets_TPMratio4x_30C %&gt;% 
+  filter(! Gene %in% Ssd1_targets_TPMratio4x_42C$Gene)</code></pre>
+<pre><code>## # A tibble: 49 x 6
+## # Groups:   Gene [49]
+##    Gene    Name  Condition TPM.RNA TPM.Ssd1 ratio.Ssd1.RNA
+##    &lt;chr&gt;   &lt;chr&gt; &lt;fct&gt;       &lt;dbl&gt;    &lt;dbl&gt;          &lt;dbl&gt;
+##  1 YGR041W BUD9  30°C         48.4    2146.          44.4 
+##  2 YDR441C APT2  30°C         30.4     747.          24.6 
+##  3 YHR167W THP2  30°C         26.2     483.          18.5 
+##  4 YKL061W BLI1  30°C         49.9     547.          11.0 
+##  5 YIL134W FLX1  30°C         21.8     202.           9.30
+##  6 YGR014W MSB2  30°C         92.4     829.           8.97
+##  7 YDR449C UTP6  30°C         71.8     618.           8.60
+##  8 YPL076W GPI2  30°C         22.4     191.           8.50
+##  9 YJR147W HMS2  30°C         68.0     573.           8.43
+## 10 YCL037C SRO9  30°C         32.1     264.           8.21
+## # … with 39 more rows</code></pre>
 </div>
 <div id="the-highest-expressed-genes-at-42c-are-not-enriched-in-ssd1-binding" class="section level2">
 <h2>The highest-expressed genes at 42C are not enriched in Ssd1 binding</h2>
@@ -776,19 +796,6 @@ write_tsv(x = Ssd1_targets_TPMratio5x_42C %&gt;%
 <li>CCW12/CWP1/TIP1/BGL2 stress-induced cell wall proteins</li>
 <li>YDR524C-B Putative protein of unknown function; SWAT-GFP and mCherry fusion proteins localize to the endoplasmic reticulum</li>
 </ul>
-</div>
-<div id="gpi-anchored-cell-wall-proteins" class="section level2">
-<h2>GPI-anchored cell wall proteins</h2>
-<p>15 prominent GPI-anchored cell wall proteins. This list demonstrates that not all GPI-anchored proteins are Ssd1 targets.</p>
-<pre class="r"><code>GPI_anchored15 &lt;- c(&quot;CCW12&quot;,&quot;CCW14&quot;,&quot;CRH1&quot;,&quot;CRH2&quot;,&quot;CWP1&quot;,&quot;CWP2&quot;,
-                    &quot;ECM33&quot;,&quot;EXG2&quot;,&quot;GAS1&quot;,&quot;GAS5&quot;,&quot;GAS5&quot;,&quot;MKC7&quot;,&quot;PLB2&quot;,&quot;PRY3&quot;,&quot;PST1&quot;)
-tpm_join_bycondition %&gt;%
-  filter(Condition==&quot;30&quot;,Name %in% GPI_anchored15) %&gt;%
-  arrange(Name)</code></pre>
-<pre><code>## # A tibble: 0 x 6
-## # Groups:   Gene [0]
-## # … with 6 variables: Gene &lt;chr&gt;, Name &lt;chr&gt;, Condition &lt;fct&gt;, TPM.RNA &lt;dbl&gt;,
-## #   TPM.Ssd1 &lt;dbl&gt;, ratio.Ssd1.RNA &lt;dbl&gt;</code></pre>
 </div>
 <div id="plot-tpms-by-condition-select-genes-labeled" class="section level2">
 <h2>Plot TPMs by condition, select genes labeled</h2>

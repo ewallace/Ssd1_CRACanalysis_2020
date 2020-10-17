@@ -319,41 +319,48 @@ tpm_join_bycondition %>%
 ```
 
 
-### Make output files for Ssd1-enriched genes over 5x
+### Make output files for Ssd1-enriched genes over 4x
 
 ```{r enrich_Ssd1_vs_RNA_out,dependson="mean_join_tpm",results.show=TRUE}
-Ssd1_targets_TPMratio5x_30C <- 
+Ssd1_targets_TPMratio4x_30C <- 
   tpm_join_bycondition %>%
-  filter(Condition=="30°C",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
+  filter(Condition=="30°C",TPM.RNA > 20, ratio.Ssd1.RNA > 4) %>%
   arrange(desc(ratio.Ssd1.RNA)) 
 
-write_tsv(x = Ssd1_targets_TPMratio5x_30C %>%
+write_tsv(x = Ssd1_targets_TPMratio4x_30C %>%
             select(-Condition) %>%
             mutate_if(is.numeric, round, digits = 3),
-          path="../results/Ssd1_targets_TPMratio5x_30C.txt")
+          path="../results/Ssd1_targets_TPMratio4x_30C.txt")
 
-Ssd1_targets_TPMratio5x_42C <- 
+Ssd1_targets_TPMratio4x_42C <- 
   tpm_join_bycondition %>%
-  filter(Condition=="42°C",TPM.RNA > 20, ratio.Ssd1.RNA > 5) %>%
+  filter(Condition=="42°C",TPM.RNA > 20, ratio.Ssd1.RNA > 4) %>%
   arrange(desc(ratio.Ssd1.RNA))
 
-write_tsv(x = Ssd1_targets_TPMratio5x_42C %>%
+write_tsv(x = Ssd1_targets_TPMratio4x_42C %>%
             select(-Condition) %>%
             mutate_if(is.numeric, round, digits = 3),
-          path="../results/Ssd1_targets_TPMratio5x_42C.txt")
+          path="../results/Ssd1_targets_TPMratio4x_42C.txt")
 ```
 
 ## Which genes are enriched at 42C not 30C?
 
-```{r enrich_Ssd1_42more,dependson="mean_join_tpm"}
-Ssd1_targets_TPMratio5x_42C %>% 
-  filter(! Gene %in% Ssd1_targets_TPMratio5x_30C$Gene)
+```{r enrich_Ssd1_42more,dependson="enrich_Ssd1_vs_RNA_out"}
+Ssd1_targets_TPMratio4x_42C %>% 
+  filter(! Gene %in% Ssd1_targets_TPMratio4x_30C$Gene)
+```
+
+## Which genes are enriched at 30C not 42C?
+
+```{r enrich_Ssd1_30more,dependson="enrich_Ssd1_vs_RNA_out"}
+Ssd1_targets_TPMratio4x_30C %>% 
+  filter(! Gene %in% Ssd1_targets_TPMratio4x_42C$Gene)
 ```
 
 
 ## The highest-expressed genes at 42C are not enriched in Ssd1 binding
 
-```{r highest_42C,dependson="mean_join_tpm"}
+```{r highest_42C,dependson="enrich_Ssd1_vs_RNA_out"}
 tpm_join_bycondition %>%
   filter(Condition=="42°C") %>%
   arrange(desc(TPM.RNA))
@@ -373,19 +380,6 @@ tpm_join_bycondition %>%
 * TSA1/SOD1 involved in oxidative stress resistance
 * CCW12/CWP1/TIP1/BGL2 stress-induced cell wall proteins
 * YDR524C-B Putative protein of unknown function; SWAT-GFP and mCherry fusion proteins localize to the endoplasmic reticulum
-
-## GPI-anchored cell wall proteins
-
-15 prominent GPI-anchored cell wall proteins. This list demonstrates that not all GPI-anchored proteins are Ssd1 targets.
-
-```{r GPI_anchored15_30C,dependson="mean_join_tpm"}
-GPI_anchored15 <- c("CCW12","CCW14","CRH1","CRH2","CWP1","CWP2",
-                    "ECM33","EXG2","GAS1","GAS5","GAS5","MKC7","PLB2","PRY3","PST1")
-tpm_join_bycondition %>%
-  filter(Condition=="30",Name %in% GPI_anchored15) %>%
-  arrange(Name)
-```
-
 
 
 ## Plot TPMs by condition, select genes labeled
