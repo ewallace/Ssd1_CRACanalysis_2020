@@ -339,3 +339,11 @@ ggsave(plot = SRL1_5UTRdownone_plot,
        height = 2, width = 12, device = "pdf")
 ```
 
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
+```

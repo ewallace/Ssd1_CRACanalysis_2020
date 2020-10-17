@@ -11,7 +11,7 @@
 
 <meta name="author" content="Edward Wallace" />
 
-<meta name="date" content="2020-09-28" />
+<meta name="date" content="2020-10-17" />
 
 <title>Peak analysis of Ssd1 CRAC data</title>
 
@@ -365,21 +365,17 @@ summary {
 
 <h1 class="title toc-ignore">Peak analysis of Ssd1 CRAC data</h1>
 <h4 class="author">Edward Wallace</h4>
-<h4 class="date">28 Sep 2020</h4>
+<h4 class="date">17 Oct 2020</h4>
 
 </div>
 
 
 <div id="summary" class="section level1">
 <h1>Summary</h1>
-<p>This analysis takes</p>
-<p>The goal of this analysis is to:</p>
-<ul>
-<li>filter Ssd1 CRAC hits by read count in addition to FDR</li>
-<li>generate fasta files of peak sequences</li>
-<li>do a motif anlaysi for automatic detection of sequence binding (perhaps externally in MEME)</li>
-</ul>
-<p>EF4.74 annotation, R64-1-1 genome build</p>
+<p>This analysis searches for motifs associated with Ssd1-bound RNA from the CRAC datasets.</p>
+<p>The objectives are to: * filter Ssd1 CRAC hits by read count and width in addition to FDR * generate fasta files of peak sequences * discover motifs enriched in filtered peaks</p>
+<p>It takes as input: * locations of Ssd1-bound peaks, with peak height and false discovery rate (FDR) as output by <code>pyCalculateFDRs.py</code> in gff-like format * genome sequence in fasta format (EF4.74 annotation, R64-1-1 genome build)</p>
+<p>It outputs: * sequences associated with filtered peak list, in fasta format * MEME motif analysis of sequences of top 100 peaks.</p>
 </div>
 <div id="load-gtfs" class="section level1">
 <h1>Load gtfs</h1>
@@ -526,6 +522,8 @@ select_seqs_above_minwidth &lt;- function(StringSet,minwidth=10) {
     widths &lt;- width(StringSet)
     return( StringSet[ which(widths &gt; minwidth) ])
 }</code></pre>
+<div id="top-500-peaks-min-width-8-more-inclusive" class="section level2">
+<h2>Top 500 peaks, min width 8 (more inclusive)</h2>
 <pre class="r"><code>S3_30_desc500_minwidth8_peakseqs &lt;- getSeq_gffdf(S3_30_df_desc500) %&gt;%
     select_seqs_above_minwidth(minwidth=8) %T&gt;% 
     writeXStringSet(paste0(data_output_dir,
@@ -549,6 +547,9 @@ S4_42_desc500_minwidth8_peakseqs &lt;- getSeq_gffdf(S4_42_df_desc500) %&gt;%
     writeXStringSet(paste0(data_output_dir,
                            &quot;/Ssd1_4_42_peaks_FDR_p0_01_desc500_minwidth_8.fa&quot;)
     )</code></pre>
+</div>
+<div id="top-100-peaks-min-width-20-more-exclusive" class="section level2">
+<h2>Top 100 peaks, min width 20 (more exclusive)</h2>
 <pre class="r"><code>S3_30_desc100_minwidth20_peakseqs &lt;- S3_30_df_desc500 %&gt;%
     head(n=100) %&gt;%
     getSeq_gffdf() %&gt;%
@@ -580,6 +581,105 @@ S4_42_desc100_minwidth20_peakseqs &lt;- S4_42_df_desc500 %&gt;%
     writeXStringSet(paste0(data_output_dir,
                            &quot;/Ssd1_4_42_peaks_FDR_p0_01_desc100_minwidth20.fa&quot;)
     )</code></pre>
+</div>
+<div id="meme-motif-search" class="section level2">
+<h2>MEME motif search</h2>
+<p>Runs MEME motif search on top 100 peaks. We ran this with MEME 5.1.1</p>
+<pre class="r"><code>run_MEME &lt;- function(fafile, outputdir, nmotifs = 10, minw = 5, maxw = 8,dry_run = FALSE) {
+    cmd_meme &lt;- paste(&quot;meme&quot;, fafile, &quot;-dna&quot;, &quot;-oc&quot;, outputdir, 
+                      &quot;-mod anr&quot;, &quot;-nmotifs&quot;, nmotifs, 
+                      &quot;-minw&quot;, minw, &quot;-maxw&quot;, maxw, 
+                      &quot;-markov_order 1&quot;, &quot;-objfun classic&quot;)
+    if (!dry_run) {
+        system(cmd_meme)
+    }
+    cmd_meme
+}
+run_MEME(paste0(data_output_dir,
+                           &quot;/Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20.fa&quot;),
+         paste0(data_output_dir,&quot;/Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20_MEME&quot;),
+         dry_run = TRUE)</code></pre>
+<pre><code>## [1] &quot;meme ../results//Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20.fa -dna -oc ../results//Ssd1_3_30_peaks_FDR_p0_01_desc100_minwidth20_MEME -mod anr -nmotifs 10 -minw 5 -maxw 8 -markov_order 1 -objfun classic&quot;</code></pre>
+<pre class="r"><code>run_MEME(paste0(data_output_dir,
+                           &quot;/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa&quot;),
+         paste0(data_output_dir,&quot;/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME&quot;),
+         dry_run = TRUE )</code></pre>
+<pre><code>## [1] &quot;meme ../results//Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa -dna -oc ../results//Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME -mod anr -nmotifs 10 -minw 5 -maxw 8 -markov_order 1 -objfun classic&quot;</code></pre>
+<pre class="r"><code>run_MEME(paste0(data_output_dir,
+                           &quot;/Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20.fa&quot;),
+         paste0(data_output_dir,&quot;/Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20_MEME&quot;),
+         dry_run = TRUE )</code></pre>
+<pre><code>## [1] &quot;meme ../results//Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20.fa -dna -oc ../results//Ssd1_4_30_peaks_FDR_p0_01_desc100_minwidth20_MEME -mod anr -nmotifs 10 -minw 5 -maxw 8 -markov_order 1 -objfun classic&quot;</code></pre>
+<pre class="r"><code>run_MEME(paste0(data_output_dir,
+                           &quot;/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa&quot;),
+         paste0(data_output_dir,&quot;/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME&quot;) ,
+         dry_run = TRUE)</code></pre>
+<pre><code>## [1] &quot;meme ../results//Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa -dna -oc ../results//Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME -mod anr -nmotifs 10 -minw 5 -maxw 8 -markov_order 1 -objfun classic&quot;</code></pre>
+</div>
+<div id="session-info" class="section level2">
+<h2>Session Info</h2>
+<p>Package versions, etc., that ran this file.</p>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>## R version 4.0.0 (2020-04-24)
+## Platform: x86_64-apple-darwin17.0 (64-bit)
+## Running under: macOS Mojave 10.14.6
+## 
+## Matrix products: default
+## BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+## 
+## locale:
+## [1] en_GB.UTF-8/en_GB.UTF-8/en_GB.UTF-8/C/en_GB.UTF-8/en_GB.UTF-8
+## 
+## attached base packages:
+## [1] parallel  stats4    stats     graphics  grDevices utils     datasets 
+## [8] methods   base     
+## 
+## other attached packages:
+##  [1] Biostrings_2.56.0    XVector_0.28.0       rtracklayer_1.47.0  
+##  [4] GenomicRanges_1.40.0 GenomeInfoDb_1.24.0  IRanges_2.22.2      
+##  [7] S4Vectors_0.26.1     BiocGenerics_0.34.0  cowplot_1.0.0       
+## [10] magrittr_1.5         forcats_0.5.0        stringr_1.4.0       
+## [13] dplyr_0.8.5          purrr_0.3.4          readr_1.3.1         
+## [16] tidyr_1.1.0          tibble_3.0.1         ggplot2_3.3.1       
+## [19] tidyverse_1.3.0     
+## 
+## loaded via a namespace (and not attached):
+##  [1] Biobase_2.48.0              httr_1.4.1                 
+##  [3] jsonlite_1.6.1              modelr_0.1.8               
+##  [5] assertthat_0.2.1            blob_1.2.1                 
+##  [7] GenomeInfoDbData_1.2.3      cellranger_1.1.0           
+##  [9] Rsamtools_2.4.0             yaml_2.2.1                 
+## [11] pillar_1.4.4                backports_1.1.7            
+## [13] lattice_0.20-41             glue_1.4.1                 
+## [15] digest_0.6.25               rvest_0.3.5                
+## [17] colorspace_1.4-1            Matrix_1.2-18              
+## [19] htmltools_0.4.0             XML_3.99-0.3               
+## [21] pkgconfig_2.0.3             broom_0.5.6                
+## [23] haven_2.3.0                 zlibbioc_1.34.0            
+## [25] scales_1.1.1                BiocParallel_1.22.0        
+## [27] farver_2.0.3                generics_0.0.2             
+## [29] ellipsis_0.3.1              withr_2.2.0                
+## [31] SummarizedExperiment_1.18.1 cli_2.0.2                  
+## [33] crayon_1.3.4                readxl_1.3.1               
+## [35] evaluate_0.14               fs_1.4.1                   
+## [37] fansi_0.4.1                 nlme_3.1-148               
+## [39] xml2_1.3.2                  tools_4.0.0                
+## [41] hms_0.5.3                   matrixStats_0.56.0         
+## [43] lifecycle_0.2.0             munsell_0.5.0              
+## [45] reprex_0.3.0                DelayedArray_0.14.0        
+## [47] compiler_4.0.0              rlang_0.4.6                
+## [49] grid_4.0.0                  RCurl_1.98-1.2             
+## [51] rstudioapi_0.11             labeling_0.3               
+## [53] bitops_1.0-6                rmarkdown_2.2              
+## [55] gtable_0.3.0                DBI_1.1.0                  
+## [57] R6_2.4.1                    GenomicAlignments_1.24.0   
+## [59] lubridate_1.7.8             knitr_1.28                 
+## [61] utf8_1.1.4                  stringi_1.4.6              
+## [63] Rcpp_1.0.4.6                vctrs_0.3.0                
+## [65] dbplyr_1.4.4                tidyselect_1.1.0           
+## [67] xfun_0.14</code></pre>
+</div>
 </div>
 
 

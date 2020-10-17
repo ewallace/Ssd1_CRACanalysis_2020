@@ -255,5 +255,15 @@ plot_8genes
 
 ggsave("figure/bedgraph-plot_8genes.pdf",plot_8genes,
        height=6,width=6)
+ggsave("figure/bedgraph-plot_8genes.svg",plot_8genes,
+       height=6,width=6)
 ```
 
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
+```

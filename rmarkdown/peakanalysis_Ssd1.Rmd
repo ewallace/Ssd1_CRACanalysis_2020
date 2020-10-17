@@ -1,13 +1,26 @@
 ---
 title: "Peak analysis of Ssd1 CRAC data"
 author: "Edward Wallace"
-date: "28 Sep 2020"
+date: "17 Oct 2020"
 output: html_document
 ---
 
 # Summary
 
-This analysis takes 
+This analysis searches for motifs associated with Ssd1-bound RNA from the CRAC datasets.
+
+The objectives are to:
+* filter Ssd1 CRAC hits by read count and width in addition to FDR
+* generate fasta files of peak sequences
+* discover motifs enriched in filtered peaks
+
+It takes as input: 
+* locations of Ssd1-bound peaks, with peak height and false discovery rate (FDR) as output by `pyCalculateFDRs.py` in gff-like format
+* genome sequence in fasta format (EF4.74 annotation, R64-1-1 genome build)
+
+It outputs:
+* sequences associated with filtered peak list, in fasta format
+* MEME motif analysis of sequences of top 100 peaks.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -59,13 +72,6 @@ print_gff_nice <- function(gff_df) {
 
 ```
 
-The goal of this analysis is to:
-
-* filter Ssd1 CRAC hits by read count in addition to FDR
-* generate fasta files of peak sequences
-* do a motif anlaysi for automatic detection of sequence binding (perhaps externally in MEME)
-
-EF4.74 annotation, R64-1-1 genome build
 
 # Load gtfs
 
@@ -273,5 +279,14 @@ run_MEME(paste0(data_output_dir,
                            "/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20.fa"),
          paste0(data_output_dir,"/Ssd1_3_42_peaks_FDR_p0_01_desc100_minwidth20_MEME") ,
          dry_run = TRUE)
+```
+
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
 ```
 

@@ -1,7 +1,7 @@
 ---
 title: "Ssd1 enrichment from normalizing to RNA-seq on full-length transcripts"
 author: "Edward Wallace"
-date: "26th September 2020"
+date: "17th Oct 2020"
 output: 
   html_document:
     toc: true
@@ -431,3 +431,11 @@ ggsave("../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf",
        plot_Ssd1_vs_RNA_colourlabels, width = 6, height = 3.2)
 ```
 
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
+```
