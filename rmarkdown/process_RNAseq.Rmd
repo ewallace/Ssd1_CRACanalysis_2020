@@ -9,9 +9,9 @@ output: html_document
 
 This script contains the code used to preprocess RNA-seq data measuring mRNA levels in conditions matched to CRAC experiments.
 
-It begins at fastq files, and ends with a text-format coverage file on RNA transcripts: `RNAseq/allsample_transcriptcounts.txt`. 
+It begins at fastq files, and ends with a text-format coverage file on RNA transcripts: `results/RNAseq_stressmatched_transcriptcounts.txt`. 
 
-## run fastqc for quality control
+## Run fastqc for quality control
 
 ```{bash fastqc,eval=FALSE}
 fastqc -t 12 \
@@ -20,7 +20,7 @@ fastqc -t 12 \
 ```
 
 
-## align to genome with novoalign
+## Align to genome with novoalign
 
 ```{R novoalign,echo=FALSE,eval=FALSE}
 # novoindex = "/homes2/genomes/s.cerevisiae/sacCer3/novoindexes/sacCer3.novoindex"
@@ -68,6 +68,8 @@ alignReadsSample("SB20190918_D_16min_GE",
                  "/homes/ewallac2/Ssd1_Feb2020/RNAseq/novoalign_sam",
                  dryrun=TRUE)
 ```
+
+## Sort and Index aligned reads in .bam format
 
 ```{R bamsortindex,echo=FALSE,eval=FALSE}
 
@@ -123,7 +125,9 @@ bamSortIndexSample("SB20190918_D_16min_GE",
                  dryrun=TRUE)
 ```
 
-## count with bedtools
+## Count aligned reads on transcripts with bedtools
+
+First write the header.
 
 ```{python header_multicov_counts}
 import time
@@ -131,13 +135,14 @@ import time
 gff_fields = ["seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attributes"]
 sample_names = ["RNA_A_30", "RNA_B_30", "RNA_C_GE","RNA_D_GE", "RNA_E_42", "RNA_F_42"]
 
-with open("RNAseq/allsample_transcriptcounts.txt", "w") as outhandle:
-	outhandle.write( "# allsample_transcriptcounts.txt - counts to transcripts from multiBamCov\n")
-	outhandle.write( "# Run from normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd\n")
+with open("results/RNAseq_stressmatched_transcriptcounts.txt", "w") as outhandle:
+	outhandle.write( "# RNAseq_stressmatched_transcriptcounts.txt - counts to transcripts from multiBamCov\n")
+	outhandle.write( "# Run from process_RNAseq.Rmd\n")
 	outhandle.write( "# RNA_stressmatched_StefanBresson2020, date %s\n" % time.strftime("%d-%m-%Y"))
 	outhandle.write( "%s\n" % '\t'.join(gff_fields + sample_names))
 ```
 
+Then count to transcripts using `multiBamCov`.
 
 ```{bash multicov_counts,echo=TRUE,eval=FALSE}
 multiBamCov -S \

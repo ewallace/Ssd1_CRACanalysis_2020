@@ -98,7 +98,7 @@ ggpairs_genewise <- function(...) {
 ## Load RNA-seq count data
 
 ```{r load_RNAseq_count}
-counts_RNA_stranded <- read_tsv("../RNAseq/allsample_transcriptcounts.txt",
+counts_RNA_stranded <- read_tsv("../results/RNAseq_stressmatched_transcriptcounts.txt",
                                 comment = "#")  %>%
   mutate(Gene=gene_from_attr(attributes))
 
@@ -320,6 +320,8 @@ tpm_join_bycondition %>%
 
 
 ### Make output files for Ssd1-enriched genes over 4x
+
+We conservatively report transcripts that are at least 4-fold enriched in Ssd1 CRAC reads compared to RNA-seq, and with at least 20 TPM in the RNA-seq data. This filters out low-expressed genes with noisy counts.
 
 ```{r enrich_Ssd1_vs_RNA_out,dependson="mean_join_tpm",results.show=TRUE}
 Ssd1_targets_TPMratio4x_30C <- 

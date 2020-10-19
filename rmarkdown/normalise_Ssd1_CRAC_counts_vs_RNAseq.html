@@ -364,7 +364,7 @@ summary {
 
 <h1 class="title toc-ignore">Ssd1 enrichment from normalizing to RNA-seq on full-length transcripts</h1>
 <h4 class="author">Edward Wallace</h4>
-<h4 class="date">26th September 2020</h4>
+<h4 class="date">17th Oct 2020</h4>
 
 </div>
 
@@ -420,7 +420,7 @@ summary {
 <h1>Inspecting RNA-seq count data</h1>
 <div id="load-rna-seq-count-data" class="section level2">
 <h2>Load RNA-seq count data</h2>
-<pre class="r"><code>counts_RNA_stranded &lt;- read_tsv(&quot;../RNAseq/allsample_transcriptcounts.txt&quot;,
+<pre class="r"><code>counts_RNA_stranded &lt;- read_tsv(&quot;../results/RNAseq_stressmatched_transcriptcounts.txt&quot;,
                                 comment = &quot;#&quot;)  %&gt;%
   mutate(Gene=gene_from_attr(attributes))
 

@@ -1,15 +1,24 @@
 # Ssd1_CRACanalysis_2020
 
-Analysis of CRAC data on Ssd1, August 2020
+This repository contains extended data for the manuscript:
 
+> Yeast Ssd1 is a non-enzymatic member of the RNase II family with an alternative RNA recognition interface
+> Rosemary A. Bayne, Uma Jayachandran, Aleksandra Kasprowicz, Stefan Bresson, David Tollevey, Edward Wallace, and Atlanta G. Cook
 
-## The pipeline for read processing
+This repository concentrates on analysis of CRAC data on yeast Ssd1, 2020.
+The raw CRAC data will be archived on Gene Expression Omnibus shortly.
+
+Please address questions to Edward.Wallace@ed.ac.uk. 
+
+Structural data is available on PDB, not here.
+
+# Overview - The pipeline for read processing
 
 This is "as self--contained as possible". Most files are kept locally, with the exception of the 
 * .fastq data (very large)
 * .novoindex aligner index (large)
 
-To run the pipeline, use this code:
+To run the pipeline as used in our paper, use this code:
 
 ```
 python src/CRAC_pipeline_SE_demult_dedup.py \
@@ -27,3 +36,10 @@ python src/CRAC_pipeline_SE_demult_dedup.py \
 ```
 
 Unfortunately, due to a bug we have not yet been able to fix, this needs to be run *twice* for all tasks to complete.
+
+# Organisation of this repository
+
+Data and code is organised into subdirectories, whose contents are briefly mentioned here.
+Each directory has its own README file that describes the contents in more detail.
+
+To be continued...
