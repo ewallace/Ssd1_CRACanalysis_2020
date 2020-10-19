@@ -132,6 +132,9 @@ dmypy.json
 .Rhistory
 /rmarkdown/cache
 
+# logfiles from venn diagram package
+/rmarkdown/*.log
+
 # Mac OS X
 .DS_Store
 

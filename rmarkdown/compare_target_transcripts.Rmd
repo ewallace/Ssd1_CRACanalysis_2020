@@ -1,0 +1,191 @@
+---
+title: "Compare Ssd1 target transcripts against Hogan 2008, Jansen 2009, Hose 2020"
+author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
+date: "19 October 2020"
+output: 
+    html_document:
+        toc: true
+---
+
+This analysis takes the list of transcripts enriched in Ssd1 binding in the CRAC dataset, and compares them with Ssd1-targeted transcripts from previous publications that do RIP-ChIP or RIP-seq.
+
+* Hogan 2008 
+* Jansen 2009
+* Hose 2020
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.path="figure/compare_target_transcripts-")
+
+library(tidyverse)
+library(Biostrings)
+library(here)
+library(VennDiagram)
+venn <- function(...) {
+    venn.diagram(x=list(...),filename=NULL,margin=0.1) %>% grid.draw
+}
+```
+
+# Lists of mRNAs enriched in Ssd1 binding
+
+## Hogan 2008
+
+Reading data from Hogan 2008 `https://doi.org/10.1371/journal.pbio.0060255.sd003`.
+
+```{r Hogan_targets}
+# hoganFDRsall <- 
+#     here::here("data","Ssd1_targets","Hogan2008_FDR_Dataset_S2.txt") %>%
+#     read_tsv(comment="#")
+# 
+# hoganFDRsall
+
+ssd1_data_hogan2008 <-
+  readxl::read_excel(path = "../input_targets/journal.pbio.0060255.sd003_Hogan2008_Dataset_S3.xls",
+                     sheet = "Ssd1_sam",skip=1,
+                     col_names = c("Gene",
+                                   "Score",
+                                   "Numerator",
+                                   "Denominator",
+                                   "FoldChange",
+                                   "qvalue",
+                                   "localfdr")
+  )
+
+ssd1_data_hogan2008
+
+ssd1_targets_hogan2008 <- 
+    ssd1_data_hogan2008 %>%
+    filter(str_detect(Gene,"_ORF"),localfdr < 1) %>%
+    pull(Gene) %>%
+    str_remove("_.*") %>%
+    unique
+```
+
+## Jansen 2009
+
+Reading data from Jansen 2009.
+
+Surprisingly, the gene systematic names in this table are not completely systematic.
+
+```{r Jansen_targets}
+ssd1_data_jansen2009 <-
+    readxl::read_excel(path = "../input_targets/NIHMS158901-supplement-02.xls",
+                       sheet=1)
+
+ssd1_data_jansen2009 
+
+# Here we have to take some effort to get systematic names for all targets
+ssd1_genic_targets_jansen2009 <- 
+    ssd1_data_jansen2009 %>%
+    filter(`inter/genic?`=="genic") %>%
+    pull(sys_id)
+
+ssd1_intergenic_targets_jansen2009 <- 
+    c(ssd1_data_jansen2009 %>%
+          filter(`inter/genic?`!="genic",`sys_id`==`left gene name`) %>%
+          pull(`left_gene sys id`),
+      ssd1_data_jansen2009 %>%
+          filter(`inter/genic?`!="genic",`sys_id`==`right gene name`) %>%
+          pull(`right_gene sys id`)
+    )
+
+ssd1_targets_jansen2009 <- unique( c(ssd1_genic_targets_jansen2009,
+                                     ssd1_intergenic_targets_jansen2009) )
+```
+
+## Hose 2020
+
+```{r Hose_targets}
+ssd1_data_hose2020 <-
+    readxl::read_excel(path = "../input_targets/elife-52063-supp2-v2_Hose2020.xlsx",
+                       range = "A2:E6715",
+                       col_names = c("Gene",
+                                     "Annotation",
+                                     "Bound",
+                                     "RNA_DE",
+                                     "Prot_DE")
+    )
+
+ssd1_data_hose2020
+
+ssd1_targets_hose2020 <- 
+    ssd1_data_hose2020 %>%
+    filter(Bound=="yes") %>%
+    pull(Gene)
+```
+
+# Venn diagram of intersections
+
+Ugly yet effective.
+
+```{r venn_hogan_jansen_hose,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=4,fig.height=3.8}
+venn(Hogan=ssd1_targets_hogan2008,
+     Jansen=ssd1_targets_jansen2009,
+     Hose=ssd1_targets_hose2020)
+```
+
+
+## Bayne targets
+
+Removing dubious ORFs etc that don't have assigned gene names.
+
+```{r bayne_targets}
+ssd1_data_bayne2020_30C <-
+    readr::read_tsv("../results/Ssd1_targets_TPMratio4x_30C.txt")
+
+ssd1_data_bayne2020_42C <-
+    readr::read_tsv("../results/Ssd1_targets_TPMratio4x_42C.txt")
+
+ssd1_targets_bayne2020_30C <- 
+    ssd1_data_bayne2020_30C %>%
+    filter(!is.na(Name)) %>%
+    pull(Gene)
+
+ssd1_targets_bayne2020_42C <- 
+    ssd1_data_bayne2020_42C %>%
+    filter(!is.na(Name)) %>%
+    pull(Gene)
+```
+
+
+# Venn diagram of intersections with all datasets
+
+Ugly yet effective.
+
+```{r venn_hogan_jansen_hose_bayne,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=5,fig.height=3.8}
+venn(Hogan2008=ssd1_targets_hogan2008,
+     Jansen2009=ssd1_targets_jansen2009,
+     Hose2020=ssd1_targets_hose2020,
+     Bayne30C=ssd1_targets_bayne2020_30C,
+     Bayne42C=ssd1_targets_bayne2020_42C)
+```
+
+
+## Smaller Venn diagrams of Hogan 2008 vs Jansen 2009 vs Bayne 30C
+
+```{r venn_hogan_jansen_bayne,dependson=c("Hogan_targets","Jansen_targets"),dev="svg",fig.width=2,fig.height=2}
+venn(Hogan2008=ssd1_targets_hogan2008,
+     Jansen2009=ssd1_targets_jansen2009,
+     Bayne30C=ssd1_targets_bayne2020_30C)
+```
+
+
+## What are the genes common to these three datasets?
+
+First make a gene-name data frame to show nice gene names:
+
+```{r load_genenames,warning=FALSE,message=FALSE}
+gene_name_df <- 
+  read_tsv("../input_annotation/scer-mrna-protein-absolute-estimate.txt",comment="#") %>%
+  select(Gene=orf,Name=gene)
+```
+
+Then find the intersection. Generously, we are taking 4x enriched targets in Bayne 2020 at either 30 or 42C.
+
+```{r Ssd1_11commontargets,results="show"}
+ssd1_targets_11common <- 
+    ssd1_targets_bayne2020_30C %>%
+    intersect(ssd1_targets_hogan2008) %>%
+    intersect(ssd1_targets_jansen2009)
+    
+filter(gene_name_df,Gene %in% ssd1_targets_11common)
+```
