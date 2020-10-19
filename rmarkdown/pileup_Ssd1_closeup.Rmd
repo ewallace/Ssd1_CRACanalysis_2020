@@ -189,7 +189,7 @@ SUN4_5dual_plot <- plot_pileup_one(SUN4dual_df,
                                    nucseq = TRUE) + 
     labs(title = "SUN4 5'UTR dual, pileup plot")
 SUN4_5dual_plot
-ggsave(plot = SUN4_5dual_plot, filename = "SUN4_5dual_3_30_plot.pdf",
+ggsave(plot = SUN4_5dual_plot, filename = "../figure_out/SUN4_5dual_3_30_plot.pdf",
        height = 1, width=6, device = "pdf")
 ```
 
@@ -429,7 +429,7 @@ pileup_plot_reproducible_4genes <-
 pileup_plot_reproducible_4genes
 
 ggsave(plot = pileup_plot_reproducible_4genes, 
-       filename = "pileup_plot_reproducible_4genes.pdf",
+       filename = "../figure_out/Ssd1_pileup_plot_reproducible_4genes.pdf",
        height = 7, width = 7, device = "pdf")
 ```
 

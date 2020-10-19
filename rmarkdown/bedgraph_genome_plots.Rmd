@@ -253,9 +253,7 @@ plot_8genes <-
 
 plot_8genes
 
-ggsave("figure/bedgraph-plot_8genes.pdf",plot_8genes,
-       height=6,width=6)
-ggsave("figure/bedgraph-plot_8genes.svg",plot_8genes,
+ggsave("../figure_out/bedgraph-plot_8genes.pdf",plot_8genes,
        height=6,width=6)
 ```
 
