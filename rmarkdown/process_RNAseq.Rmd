@@ -1,5 +1,5 @@
 ---
-title: "RNA-seq data analysis"
+title: "Condition-matched RNA-seq preprocessing"
 author: "Edward Wallace"
 date: "26/09/2020"
 output: html_document
@@ -7,9 +7,14 @@ output: html_document
 
 ## Summary
 
-This script contains the code used to preprocess RNA-seq data measuring mRNA levels in conditions matched to CRAC experiments.
+Preprocesses RNA-seq data measuring mRNA levels in conditions matched to CRAC experiments. These data are from Bresson et al, 2020, and archived in GEO: GSE148166.
 
-It begins at fastq files, and ends with a text-format coverage file on RNA transcripts: `results/RNAseq_stressmatched_transcriptcounts.txt`. 
+The script takes fastq files as input, and ends with a text-format coverage file on RNA transcripts: `results/RNAseq_stressmatched_transcriptcounts.txt`.
+
+It relies on genome sequences and transcript annotations from `input_annotation`, and uses the same novoalign index as `src/CRAC_pipeline_SE_demult_dedup.py`.
+
+This script runs completely independently of the CRAC pipeline.
+It needs to be run before `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, which relies on the transcript counts that this script outputs.
 
 ## Run fastqc for quality control
 

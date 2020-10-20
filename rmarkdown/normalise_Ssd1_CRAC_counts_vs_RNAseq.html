@@ -402,18 +402,20 @@ summary {
 <div id="summary" class="section level1">
 <h1>Summary</h1>
 <p>This script is to analyse relative <em>enrichment</em> of Ssd1 on mRNA, by processing time &amp; condition matched RNA seq and Ssd1 CRAC data. Then we crudely normalize Ssd1 <em>counts</em> against RNA-seq on full-length transcripts.</p>
+<p>This script relies on CRAC transcript counts produced by <code>multiBamCov</code> running in the CRAC pipeline, and found in <code>Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt</code>. So it must be run after <code>src/CRAC_pipeline_SE_demult_dedup.py</code>, see the repository <code>README.md</code> for details.</p>
+<p>This script also relies on RNA-seq transcript counts produced by <code>multiBamCov</code> running <code>process_RNAseq.Rmd</code>, found in <code>results/RNAseq_stressmatched_transcriptcounts.txt</code>. It must be run after <code>process_RNAseq.Rmd</code>.</p>
 <p>This analysis shows that:</p>
 <ul>
 <li>The highest-enriched targets of Ssd1 are mRNAs encoding cell wall proteins.</li>
 <li>Stress protein mRNAs that are most induced by heat shock are <em>not enriched</em> in Ssd1 binding, although they are bound by Ssd1.</li>
 <li>Some unexpected genes are enriched in Ssd1 binding under heat stress, including HOR7, SOD1, NRG2.</li>
 </ul>
-<p>Both RNAseq and Ssd1-CRAC are quantified on <em>full-length estimated unspliced transcripts</em> using bedtools multicov after genomic alignment with novoalign. This has some problems. For example, reads on 2 overlapping trnascripts are counted on <em>both</em>, if the UTRs or ORFs overlap.</p>
+<p>Both RNAseq and Ssd1-CRAC are quantified on <em>full-length estimated unspliced transcripts</em> using bedtools multicov after genomic alignment with novoalign. This has some problems. For example, reads on 2 overlapping transcripts are counted on <em>both</em>, if the UTRs or ORFs overlap.</p>
 <p>Note that this analysis:</p>
 <ul>
 <li>is restricted to mRNAs encoding verified ORFs froms nuclear chromosomes: no mitochondrial chromosome or ncRNAs.</li>
 <li>uses Pelechano 2013 “most abundant” annotation of transcript ends, and adds a default 25nt 5’UTR and 125nt 3’UTR for transcripts not annotated in Pelechano 2013.</li>
-<li>normalises count density by transcript length, to give Transcripts Per Million (TPM)</li>
+<li>normalises count density by transcript length, to give Transcripts Per Million (TPM).</li>
 </ul>
 </div>
 <div id="inspecting-rna-seq-count-data" class="section level1">
@@ -688,6 +690,7 @@ tpm_join_bycondition &lt;-
 ## # … with 3,872 more rows</code></pre>
 <div id="make-output-files-for-ssd1-enriched-genes-over-4x" class="section level3">
 <h3>Make output files for Ssd1-enriched genes over 4x</h3>
+<p>We conservatively report transcripts that are at least 4-fold enriched in Ssd1 CRAC reads compared to RNA-seq, and with at least 20 TPM in the RNA-seq data. This filters out low-expressed genes with noisy counts.</p>
 <pre class="r"><code>Ssd1_targets_TPMratio4x_30C &lt;- 
   tpm_join_bycondition %&gt;%
   filter(Condition==&quot;30°C&quot;,TPM.RNA &gt; 20, ratio.Ssd1.RNA &gt; 4) %&gt;%
@@ -800,6 +803,7 @@ write_tsv(x = Ssd1_targets_TPMratio4x_42C %&gt;%
 </div>
 <div id="plot-tpms-by-condition-select-genes-labeled" class="section level2">
 <h2>Plot TPMs by condition, select genes labeled</h2>
+<p>This is figure panel 4C of the manuscript, output to the file <code>../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf</code>.</p>
 <pre class="r"><code>Ssd1_targets_select &lt;- c(&quot;CTS1&quot;, &quot;DSE2&quot;, &quot;SIM1&quot;, &quot;SUN4&quot;, &quot;TOS1&quot;, &quot;UTH1&quot;, &quot;HSP150&quot;, &quot;SCW4&quot;, &quot;LRE1&quot;, &quot;SRL1&quot;, &quot;CCW12&quot;, &quot;NCA3&quot;, &quot;CIS3&quot;, &quot;MMR1&quot;, &quot;CWP2&quot;, &quot;HOR7&quot;, &quot;SPO24&quot;)
 
 HSPs_select &lt;- c(&quot;HSP26&quot;,&quot;HSP42&quot;,&quot;HSP104&quot;,&quot;SSA1&quot;,&quot;SSA2&quot;,&quot;SSA3&quot;,&quot;SSA4&quot;)

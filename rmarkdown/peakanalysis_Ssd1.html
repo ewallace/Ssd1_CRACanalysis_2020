@@ -372,10 +372,10 @@ summary {
 
 <div id="summary" class="section level1">
 <h1>Summary</h1>
-<p>This analysis searches for motifs associated with Ssd1-bound RNA from the CRAC datasets.</p>
+<p>This analysis searches for motifs associated with Ssd1-bound RNA from the CRAC datasets. This script relies on Ssd1-bound peak data in .gtf (gff-like) format produced by <code>pyCalculateFDRs.py</code> script while running the pipeline, put in the directory <code>/Ssd1_CRAC_demult_dedup_20190114_all/pyCalculateFDRs_analyses/</code>.</p>
 <p>The objectives are to: * filter Ssd1 CRAC hits by read count and width in addition to FDR * generate fasta files of peak sequences * discover motifs enriched in filtered peaks</p>
 <p>It takes as input: * locations of Ssd1-bound peaks, with peak height and false discovery rate (FDR) as output by <code>pyCalculateFDRs.py</code> in gff-like format * genome sequence in fasta format (EF4.74 annotation, R64-1-1 genome build)</p>
-<p>It outputs: * sequences associated with filtered peak list, in fasta format * MEME motif analysis of sequences of top 100 peaks.</p>
+<p>It outputs, to directory <code>results</code>: * sequences associated with filtered peak list, in fasta format * MEME motif analysis of sequences of top 100 peaks.</p>
 </div>
 <div id="load-gtfs" class="section level1">
 <h1>Load gtfs</h1>

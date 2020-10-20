@@ -9,7 +9,11 @@ output:
 
 # Summary
 
-This script is to analyse relative *enrichment* of Ssd1 on mRNA, by processing  time & condition matched RNA seq and Ssd1 CRAC data. Then we crudely normalize Ssd1 *counts* against RNA-seq on full-length transcripts.
+This script is to analyse relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data. Then we crudely normalize Ssd1 *counts* against RNA-seq on full-length transcripts.
+
+This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details. 
+
+This script also relies on RNA-seq transcript counts produced by `multiBamCov` running `process_RNAseq.Rmd`, found in `results/RNAseq_stressmatched_transcriptcounts.txt`. It must be run after `process_RNAseq.Rmd`.
 
 This analysis shows that:
 
@@ -17,13 +21,13 @@ This analysis shows that:
 * Stress protein mRNAs that are most induced by heat shock are *not enriched* in Ssd1 binding, although they are bound by Ssd1.
 * Some unexpected genes are enriched in Ssd1 binding under heat stress, including HOR7, SOD1, NRG2.
 
-Both RNAseq and Ssd1-CRAC are quantified on *full-length estimated unspliced transcripts* using bedtools multicov after genomic alignment with novoalign. This has some problems. For example, reads on 2 overlapping trnascripts are counted on *both*, if the UTRs or ORFs overlap.
+Both RNAseq and Ssd1-CRAC are quantified on *full-length estimated unspliced transcripts* using bedtools multicov after genomic alignment with novoalign. This has some problems. For example, reads on 2 overlapping transcripts are counted on *both*, if the UTRs or ORFs overlap.
 
 Note that this analysis:
 
 * is restricted to mRNAs encoding verified ORFs froms nuclear chromosomes: no mitochondrial chromosome or ncRNAs.
 * uses Pelechano 2013 "most abundant" annotation of transcript ends, and adds a default 25nt 5'UTR and 125nt 3'UTR for transcripts not annotated in Pelechano 2013.
-* normalises count density by transcript length, to give Transcripts Per Million (TPM)
+* normalises count density by transcript length, to give Transcripts Per Million (TPM).
 
 
 ```{r setup, include=FALSE}
@@ -385,6 +389,8 @@ tpm_join_bycondition %>%
 
 
 ## Plot TPMs by condition, select genes labeled
+
+This is figure panel 4C of the manuscript, output to the file `../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf`.
 
 ```{r plot_Ssd1_vs_RNA_colourlabels,dependson="mean_join_tpm",fig.height=3.2,fig.width=6}
 Ssd1_targets_select <- c("CTS1", "DSE2", "SIM1", "SUN4", "TOS1", "UTH1", "HSP150", "SCW4", "LRE1", "SRL1", "CCW12", "NCA3", "CIS3", "MMR1", "CWP2", "HOR7", "SPO24")

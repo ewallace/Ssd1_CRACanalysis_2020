@@ -372,7 +372,8 @@ summary {
 
 <div id="summary" class="section level2">
 <h2>Summary</h2>
-<p>Pileup plots for Ssd1 CRAC data. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the <code>CNYUCNYU</code> Ssd1-enriched element in those transcripts, and the <code>CCAACU</code> upstream motif.</p>
+<p>Pileup plots for Ssd1 CRAC data, only on specific regions of specific Ssd1 target genes that are specified in <code>input_annotation/Ssd1TargetGeneNamesOnly.txt</code>. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the <code>CNYUCNYU</code> Ssd1-associated motif in those transcripts, and the <code>CCAACU</code> upstream motif.</p>
+<p>This script relies on “pileup” files in tab-separated text format produced by <code>pyPileup</code> script while running the pipeline, put in the directory <code>/Ssd1_CRAC_demult_dedup_20190114_all/pyPileup_analyses/</code>. So it must be run after <code>src/CRAC_pipeline_SE_demult_dedup.py</code>, see the repository <code>README.md</code> for details.</p>
 </div>
 <div id="functions-for-data-loading-and-plotting" class="section level2">
 <h2>Functions for data loading and plotting</h2>
@@ -779,8 +780,9 @@ SCW4_5UTRwiderep_plot</code></pre>
 #        filename = &quot;SCW4_5wide_reproducible_plot.pdf&quot;,
 #        height = 4, width = 6, device = &quot;pdf&quot;)</code></pre>
 </div>
-<div id="composite-plot" class="section level2">
-<h2>Composite plot</h2>
+<div id="composite-plot---supplementary-figure-of-manuscript" class="section level2">
+<h2>Composite plot - Supplementary figure of manuscript</h2>
+<p>Output to <code>/figure_out/Ssd1_pileup_plot_reproducible_4genes.pdf</code>.</p>
 <pre class="r"><code>theme_5UTR_grid &lt;-  theme(legend.position=&quot;none&quot;,
                           axis.ticks.length = unit(5,&quot;pt&quot;) )
 pileup_plot_reproducible_4genes &lt;-

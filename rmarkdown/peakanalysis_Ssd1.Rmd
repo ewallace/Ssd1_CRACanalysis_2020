@@ -8,6 +8,7 @@ output: html_document
 # Summary
 
 This analysis searches for motifs associated with Ssd1-bound RNA from the CRAC datasets.
+This script relies on Ssd1-bound peak data in .gtf (gff-like) format produced by `pyCalculateFDRs.py` script while running the pipeline, put in the directory `/Ssd1_CRAC_demult_dedup_20190114_all/pyCalculateFDRs_analyses/`. 
 
 The objectives are to:
 * filter Ssd1 CRAC hits by read count and width in addition to FDR
@@ -18,7 +19,7 @@ It takes as input:
 * locations of Ssd1-bound peaks, with peak height and false discovery rate (FDR) as output by `pyCalculateFDRs.py` in gff-like format
 * genome sequence in fasta format (EF4.74 annotation, R64-1-1 genome build)
 
-It outputs:
+It outputs, to directory `results`:
 * sequences associated with filtered peak list, in fasta format
 * MEME motif analysis of sequences of top 100 peaks.
 

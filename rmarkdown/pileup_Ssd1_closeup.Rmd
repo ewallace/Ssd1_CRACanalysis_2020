@@ -23,7 +23,9 @@ theme_set(theme_cowplot(font_size = 11) +
 
 ## Summary
 
-Pileup plots for Ssd1 CRAC data. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the `CNYUCNYU` Ssd1-enriched element in those transcripts, and the `CCAACU` upstream motif.
+Pileup plots for Ssd1 CRAC data, only on specific regions of specific Ssd1 target genes that are specified in `input_annotation/Ssd1TargetGeneNamesOnly.txt`. These show detailed profiles of read counts, including nucleotide-specific mutations and deletions, along selected transcripts. Search for instances of the `CNYUCNYU` Ssd1-associated motif in those transcripts, and the `CCAACU` upstream motif.
+
+This script relies on "pileup" files in tab-separated text format produced by `pyPileup` script while running the pipeline, put in the directory `/Ssd1_CRAC_demult_dedup_20190114_all/pyPileup_analyses/`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details.
 
 ## Functions for data loading and plotting
 
@@ -415,7 +417,9 @@ SCW4_5UTRwiderep_plot
 #        height = 4, width = 6, device = "pdf")
 ```
 
-## Composite plot
+## Composite plot - Supplementary figure of manuscript
+
+Output to `/figure_out/Ssd1_pileup_plot_reproducible_4genes.pdf`.
 
 ```{r pileup_plot_reproducible_4genes, fig.width=7, fig.height=7}
 theme_5UTR_grid <-  theme(legend.position="none",

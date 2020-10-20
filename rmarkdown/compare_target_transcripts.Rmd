@@ -7,11 +7,16 @@ output:
         toc: true
 ---
 
-This analysis takes the list of transcripts enriched in Ssd1 binding in the CRAC dataset, and compares them with Ssd1-targeted transcripts from previous publications that do RIP-ChIP or RIP-seq.
+This analysis takes the list of transcripts enriched in Ssd1 binding in the CRAC dataset, and compares them with Ssd1-targeted transcripts from previous publications that do RIP-ChIP or RIP-seq:
 
 * Hogan 2008 
 * Jansen 2009
 * Hose 2020
+
+These publicly available data need to be downloaded to the `input_targets` directory, see `input_targets/README.md` for details.
+
+This script also relies on lists of Ssd1-enriched transcripts produced by `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, found in `results/Ssd1_targets_TPMratio4x_30C.txt`
+and `results/Ssd1_targets_TPMratio4x_42C.txt`.
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.path="figure/compare_target_transcripts-")
@@ -161,6 +166,8 @@ venn(Hogan2008=ssd1_targets_hogan2008,
 
 
 ## Smaller Venn diagrams of Hogan 2008 vs Jansen 2009 vs Bayne 30C
+
+This is figure panel 4D of the manuscript.
 
 ```{r venn_hogan_jansen_bayne,dependson=c("Hogan_targets","Jansen_targets"),dev="svg",fig.width=2,fig.height=2}
 venn(Hogan2008=ssd1_targets_hogan2008,
