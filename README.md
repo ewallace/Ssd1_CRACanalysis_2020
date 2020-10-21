@@ -15,9 +15,15 @@ Structural data is available on PDB, not here.
 # Overview - The pipeline for CRAC read processing
 
 The main data here is CRAC, an Illumina short-read protocol related to HITS-CLIP, that detects RNA crosslinking sites for specific proteins. 
-We analyse CRAC data using the python script, [src/CRAC_pipeline_SE_demult_dedup.py](src/CRAC_pipeline_SE_demult_dedup.py).
+We analyse CRAC data using the python script, [src/CRAC_pipeline_SE_demult_dedup.py](src/CRAC_pipeline_SE_demult_dedup.py). 
 This script uses the [ruffus](https://cgat-ruffus.readthedocs.io/) computational pipeline library to organise running of many 3rd-party tools.
-This script was based on an earlier version by [Sander Granneman](http://sandergranneman.bio.ed.ac.uk/), and makes extensive use of his [pyCRAC software](https://git.ecdf.ed.ac.uk/sgrannem/pycrac).
+This script was based on an earlier version by [Sander Granneman](http://sandergranneman.bio.ed.ac.uk/) for the paper:
+
+> van Nues R, Schweikert G, de Leau E, Selega A, Langford A, Franklin R, Iosub I, Wadsworth P, Sanguinetti G, Granneman S. Kinetic CRAC uncovers a role for Nab3 in determining gene expression profiles during stress. Nat Commun. 2017 Apr 11;8(1):12. doi: 10.1038/s41467-017-00025-5. [PMID: 28400552](https://pubmed.ncbi.nlm.nih.gov/28400552/); PMCID: PMC5432031.
+
+The script makes extensive use of his [pyCRAC software](https://git.ecdf.ed.ac.uk/sgrannem/pycrac):
+
+> Webb S, Hector RD, Kudla G, Granneman S. PAR-CLIP data indicate that Nrd1-Nab3-dependent transcription termination regulates expression of hundreds of protein coding genes in yeast. Genome Biol. 2014 Jan 7;15(1):R8. doi: 10.1186/gb-2014-15-1-r8. [PMID: 24393166](https://pubmed.ncbi.nlm.nih.gov/24393166/); PMCID: PMC4053934.
 
 This repository is "as self-contained as possible". Most files are kept locally, with the exception of the 
 * .fastq data (very large) - stored on GEO
