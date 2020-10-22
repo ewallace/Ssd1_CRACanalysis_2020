@@ -4,9 +4,10 @@ This repository contains extended data for the manuscript:
 
 > Yeast Ssd1 is a non-enzymatic member of the RNase II family with an alternative RNA recognition interface
 > Rosemary A. Bayne, Uma Jayachandran, Aleksandra Kasprowicz, Stefan Bresson, David Tollevey, Edward W. J. Wallace, and Atlanta G. Cook
+> bioRxiv preprint, 2020 [doi: 10.1101/2020.10.22.350314](https://doi.org/10.1101/2020.10.22.350314)
 
 This repository concentrates on analysis of CRAC data measuring the RNA-binding of yeast [Ssd1/YDR293C](https://www.yeastgenome.org/locus/S000002701), 2020.
-The raw CRAC sequencing data will be archived on Gene Expression Omnibus shortly (October 2020).
+The raw CRAC sequencing data is archived on Gene Expression Omnibus, accession [GSE159835](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE159835).
 
 Please address questions to Edward.Wallace@ed.ac.uk. 
 
