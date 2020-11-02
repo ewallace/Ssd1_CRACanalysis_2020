@@ -11,7 +11,7 @@ The raw CRAC sequencing data is archived on Gene Expression Omnibus, accession [
 
 Please address questions to Edward.Wallace@ed.ac.uk. 
 
-Structural data is available on PDB, not here.
+Structural data is available on PDB, PDBid 7AM1.
 
 # Overview - The pipeline for CRAC read processing
 
