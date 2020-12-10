@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/288707159.svg)](https://zenodo.org/badge/latestdoi/288707159)
+
 # Ssd1_CRACanalysis_2020
 
 This repository contains extended data for the manuscript:
