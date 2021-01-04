@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/288707159.svg)](https://zenodo.org/badge/latestdoi/288707159)
+
 # Ssd1_CRACanalysis_2020
 
 This repository contains extended data for the manuscript:
@@ -11,7 +13,7 @@ The raw CRAC sequencing data is archived on Gene Expression Omnibus, accession [
 
 Please address questions to Edward.Wallace@ed.ac.uk, at [the Wallace lab, University of Edinburgh](https://ewallace.github.io/).
 
-Structural data is available on PDB, not here.
+Structural data is available on PDB, PDBid 7AM1.
 
 # Overview - The pipeline for CRAC read processing
 
