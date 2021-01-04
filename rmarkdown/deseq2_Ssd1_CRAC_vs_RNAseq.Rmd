@@ -1,0 +1,296 @@
+---
+title: "DeSeq2 analysis of Ssd1 enrichment compared RNA-seq, on full-length transcripts"
+author: "Edward Wallace"
+date: "4th Jan 2020"
+output: 
+  html_document:
+    toc: true
+---
+
+# Summary
+
+This script is an alternative approach to analyse relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data. We use the DeSeq2 package for differential expression analysis, here to analyse differential enrichment of Ssd1-bound transcripts.
+
+This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details. 
+
+This script also relies on RNA-seq transcript counts produced by `multiBamCov` running `process_RNAseq.Rmd`, found in `results/RNAseq_stressmatched_transcriptcounts.txt`. It must be run after `process_RNAseq.Rmd`.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, warning=FALSE, message=FALSE,
+                      cache.path = "cache/deseq2_Ssd1_CRAC-",
+                      fig.path = "figure/deseq2_Ssd1_CRAC-")
+
+# library(tidyverse)
+# library(cowplot)
+# theme_set(theme_cowplot(font_size=11) %+replace% 
+#             theme(strip.background=element_blank(),
+#                   panel.border = element_rect(color = "grey85", fill = NA)))
+library(DESeq2)
+library(tidyr)
+
+gene_from_attr <- function(attr_string,
+                           before="ID=",gene_str="[\\w-]+",after="_") {
+    # pull a gene name from an attribute string
+    match_str = paste0(before,gene_str,after)
+    attr_string %>%
+        stringr::str_extract(match_str) %>%
+        stringr::str_remove(before) %>%
+        stringr::str_remove(after)
+}
+
+# setwd("/homes/ewallac2/Repos/Ssd1_CRACanalysis_2020/rmarkdown")
+```
+
+# Inspecting RNA-seq count data
+
+## Load RNA-seq count data
+
+```{r load_RNAseq_count}
+counts_RNA_stranded <- readr::read_tsv("../results/RNAseq_stressmatched_transcriptcounts.txt",
+                                comment = "#")  %>%
+  dplyr::mutate(Gene=gene_from_attr(attributes))
+
+```
+
+## Test DeSeq2 on RNA-seq data, 30C vs 42C
+
+```{r create_dds_RNA,dependson="load_RNAseq_count"}
+sampledata_RNAheat <- 
+  data.frame(
+    sample = c("RNA_A_30","RNA_B_30","RNA_E_42","RNA_F_42"),
+    temperature = c("30","30","42","42"),
+    batch = c("A","B","A","B")) %>%
+  magrittr::set_rownames(.$sample)
+
+counts_RNAheat <-
+  dplyr::select(counts_RNA_stranded, sampledata_RNAheat$sample) %>%
+  magrittr::set_rownames(counts_RNA_stranded$Gene)
+
+dds_RNAheat <- DESeqDataSetFromMatrix(countData = counts_RNAheat,
+                              colData = sampledata_RNAheat,
+                              design = ~ temperature) %>%
+  DESeq()
+
+resultsNames(dds_RNAheat)
+
+results_RNAheat <- results(dds_RNAheat, name="temperature_42_vs_30")
+
+results_RNAheat
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_RNAheat,dependson="create_dds_RNA"}
+plotMA(results_RNAheat, ylim=c(-5,5))
+```
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_RNAheatLFC,dependson="create_dds_RNA"}
+results_RNAheatLFC <- lfcShrink(dds_RNAheat, coef="temperature_42_vs_30", type="apeglm")
+
+results_RNAheatLFC
+
+plotMA(results_RNAheatLFC, ylim=c(-5,5))
+
+```
+
+This shrinkage makes little difference.
+
+# Comparing Ssd1 CRAC to RNA-seq data to estimate enrichment
+
+## Load Ssd1-bound genewise counts
+
+```{r load_Ssd1_counts}
+counts_Ssd1_stranded <- readr::read_tsv("../Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt",
+                                 comment = "#") %>% 
+  dplyr::mutate(Gene=gene_from_attr(attributes))%>%
+  dplyr::select(Gene,seqname,feature,start,end,attributes,
+         Ssd1_3_30 = `20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30.bam`,
+         Ssd1_4_30 = `20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30.bam`,
+         Ssd1_3_42 = `20190114_Ssd1_CRAC_trimmed_NNNAGAGC_SSD1_3_42.bam`,
+         Ssd1_4_42 = `20190114_Ssd1_CRAC_trimmed_NNNCTAGC_SSD1_4_42.bam`, 
+         BY4741 = `20190114_Ssd1_CRAC_trimmed_NNNGACTTAGC_BY4741.bam`) 
+```
+
+```{r show_Ssd1_counts,dependson="load_Ssd1_counts"}
+counts_Ssd1_stranded
+```
+
+## Test DeSeq2 on Ssd1 vs RNA-seq data, 30C vs 42C
+
+```{r create_dds_Ssd1heat,dependson=c("create_dds_RNA","load_Ssd1_counts")}
+# sampledata_RNAheat <- 
+#   data.frame(
+#     sample = c("RNA_A_30","RNA_B_30","RNA_E_42","RNA_F_42"),
+#     temperature = c("30","30","42","42"),
+#     batch = c("A","B","A","B")) %>%
+#   magrittr::set_rownames(.$sample)
+
+sampledata_Ssd1heat <- 
+  data.frame(
+    sample = c("Ssd1_3_30","Ssd1_4_30","Ssd1_3_42","Ssd1_4_42"),
+    temperature = c("30","30","42","42"),
+    batch = c("3","4","3","4")) %>%
+  magrittr::set_rownames(.$sample)
+
+counts_Ssd1heat <-
+  dplyr::select(counts_Ssd1_stranded, sampledata_Ssd1heat$sample) %>%
+  magrittr::set_rownames(counts_Ssd1_stranded$Gene)
+
+dds_Ssd1heat <- DESeqDataSetFromMatrix(countData = counts_Ssd1heat,
+                              colData = sampledata_Ssd1heat,
+                              design = ~ temperature) %>%
+  DESeq()
+
+resultsNames(dds_Ssd1heat)
+
+results_Ssd1heat <- results(dds_Ssd1heat, name="temperature_42_vs_30")
+
+results_Ssd1heat
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_Ssd1heat,dependson="create_dds_Ssd1"}
+plotMA(results_Ssd1heat, ylim=c(-5,5))
+```
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_Ssd1heatLFC,dependson="create_dds_RNA"}
+results_Ssd1heatLFC <- lfcShrink(dds_Ssd1heat, coef="temperature_42_vs_30", type="apeglm")
+
+results_Ssd1heatLFC
+
+plotMA(results_Ssd1heatLFC, ylim=c(-5,5))
+
+```
+
+This makes a big difference for low-detected transcripts here.
+
+
+## Setup enrichment in Ssd1-bound RNA
+
+```{r setup_dds_Ssd1bind,dependson=c("create_dds_RNAheat","create_dds_Ssd1heat")}
+sampledata_Ssd1bind <- 
+  data.frame(
+    sample = c("RNA_A_30","RNA_B_30","RNA_E_42","RNA_F_42",
+               "Ssd1_3_30","Ssd1_4_30","Ssd1_3_42","Ssd1_4_42"),
+    temperature = rep(c("30","30","42","42"),2),
+    batch = c("A","B","A","B", "3","4","3","4"),
+    type = rep(c("RNA","Ssd1"),each=4)
+    ) %>%
+  magrittr::set_rownames(.$sample)
+
+sampledata_Ssd1bind30 <- dplyr::filter(sampledata_Ssd1bind, temperature == "30")
+sampledata_Ssd1bind42 <- dplyr::filter(sampledata_Ssd1bind, temperature == "42")
+
+all.equal(counts_RNA_stranded$Gene, counts_Ssd1_stranded$Gene)
+stopifnot(all.equal(counts_RNA_stranded$Gene, counts_Ssd1_stranded$Gene))
+
+counts_Ssd1bind30 <- cbind(
+  dplyr::select(counts_RNA_stranded, c("RNA_A_30","RNA_B_30")),
+  dplyr::select(counts_Ssd1_stranded, c("Ssd1_3_30","Ssd1_4_30"))) %>%
+  magrittr::set_rownames(counts_RNA_stranded$Gene)
+
+counts_Ssd1bind42 <- cbind(
+  dplyr::select(counts_RNA_stranded, c("RNA_E_42","RNA_F_42")),
+  dplyr::select(counts_Ssd1_stranded, c("Ssd1_3_42","Ssd1_4_42"))) %>%
+  magrittr::set_rownames(counts_RNA_stranded$Gene)
+```
+
+## Calculate enrichment in Ssd1-bound RNA at 30C
+
+```{r create_dds_Ssd1bind30,dependson="setup_dds_Ssd1bind"}
+dds_Ssd1bind30 <- DESeqDataSetFromMatrix(countData = counts_Ssd1bind30,
+                              colData = sampledata_Ssd1bind30,
+                              design = ~ type) %>%
+  DESeq()
+
+resultsNames(dds_Ssd1bind30)
+
+results_Ssd1bind30 <- results(dds_Ssd1bind30, name="type_Ssd1_vs_RNA",
+                              lfcThreshold=1,alpha=0.05)
+
+results_Ssd1bind30
+
+summary(results_Ssd1bind30)
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_Ssd1bind30,dependson="create_dds_Ssd1bind30"}
+plotMA(results_Ssd1bind30, ylim=c(-5,5))
+```
+
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_Ssd1bind30LFC,dependson="create_dds_Ssd1bind30"}
+results_Ssd1bind30LFC <- lfcShrink(dds_Ssd1bind30, coef="type_Ssd1_vs_RNA", type="apeglm",
+                              lfcThreshold=1)
+
+results_Ssd1bind30LFC
+
+plotMA(results_Ssd1bind30LFC, ylim=c(-5,5))
+
+```
+
+This makes a difference for low-detected transcripts here.
+
+
+## Calculate enrichment in Ssd1-bound RNA at 42C
+
+```{r create_dds_Ssd1bind42,dependson="setup_dds_Ssd1bind"}
+dds_Ssd1bind42 <- DESeqDataSetFromMatrix(countData = counts_Ssd1bind42,
+                              colData = sampledata_Ssd1bind42,
+                              design = ~ type) %>%
+  DESeq()
+
+resultsNames(dds_Ssd1bind42)
+
+results_Ssd1bind42 <- results(dds_Ssd1bind42, name="type_Ssd1_vs_RNA",
+                              lfcThreshold=1,alpha=0.05)
+
+results_Ssd1bind42
+
+summary(results_Ssd1bind42)
+
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_Ssd1bind42,dependson="create_dds_Ssd1bind42"}
+plotMA(results_Ssd1bind42, ylim=c(-5,5))
+```
+
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_Ssd1bind42LFC,dependson="create_dds_Ssd1bind42"}
+results_Ssd1bind42LFC <- lfcShrink(dds_Ssd1bind42, coef="type_Ssd1_vs_RNA", type="apeglm",
+                              lfcThreshold=1)
+
+results_Ssd1bind42LFC
+
+plotMA(results_Ssd1bind42LFC, ylim=c(-5,5))
+
+```
+
+This makes a difference for low-detected transcripts here.
+
+## TO DO
+
+* Ordered lists of differentially expressed genes
+* Compare to other datasets, perhaps adjust thresholds for inclusion
+* Gene ontology search
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
+```

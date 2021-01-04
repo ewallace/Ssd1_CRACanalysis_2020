@@ -60,9 +60,9 @@ gene_from_attr <- function(attr_string,
     # pull a gene name from an attribute string
     match_str = paste0(before,gene_str,after)
     attr_string %>%
-        str_extract(match_str) %>%
-        str_remove(before) %>%
-        str_remove(after)
+        stringr::str_extract(match_str) %>%
+        stringr::str_remove(before) %>%
+        stringr::str_remove(after)
 }
 
 scientific_10 <- function(x) {
