@@ -9,7 +9,7 @@ This repository contains extended data for the manuscript:
 This repository concentrates on analysis of CRAC data measuring the RNA-binding of yeast [Ssd1/YDR293C](https://www.yeastgenome.org/locus/S000002701), 2020.
 The raw CRAC sequencing data is archived on Gene Expression Omnibus, accession [GSE159835](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE159835).
 
-Please address questions to Edward.Wallace@ed.ac.uk. 
+Please address questions to Edward.Wallace@ed.ac.uk, at [the Wallace lab, University of Edinburgh](https://ewallace.github.io/).
 
 Structural data is available on PDB, not here.
 
@@ -65,7 +65,7 @@ python src/CRAC_pipeline_SE_demult_dedup.py \
 Unfortunately, due to a bug that we have not been able to fix, this pipeline script needs to be run *twice* for all tasks to complete. We think the bug arises from the `ruffus` pipeline not waiting for `novoalign` to finish running, so that the first time the script runs all steps before genomic alignment, but those post-alignment return errors. Then the second time the pipeline runs, the post-alignment tasks run to completion (#overlyhonestmethods).
 
 
-# Organisation of this repository
+# Contents of this repository
 
 Data and code is organised into subdirectories, whose contents are briefly mentioned in this section.
 Each directory has its own `README.md` file that describes the contents in more detail.

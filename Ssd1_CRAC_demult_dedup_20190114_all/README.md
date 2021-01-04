@@ -37,7 +37,7 @@ Tab-separated gff-like text files showing peak locations, heights, and false dis
 
 ## pyPileup_analyses
 
-Tab-separated text files showing "pileups" of read counts with deletions and mutations, and sequence, for specific Ssd1-targeted genes only. 
+Tab-separated text files showing "pileups" of (deduplicated) read counts, deletions, and mutations, also nucleotide sequence, for specific Ssd1-targeted transcripts only. 
 
 * 20190114_Ssd1_CRAC_trimmed_NNNAGAGC_SSD1_3_42_pileups.txt
 * 20190114_Ssd1_CRAC_trimmed_NNNCTAGC_SSD1_4_42_pileups.txt
