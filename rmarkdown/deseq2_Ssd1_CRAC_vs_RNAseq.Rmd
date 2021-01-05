@@ -28,6 +28,8 @@ knitr::opts_chunk$set(echo = TRUE, cache=TRUE, warning=FALSE, message=FALSE,
 #                   panel.border = element_rect(color = "grey85", fill = NA)))
 library(DESeq2)
 library(tidyr)
+library(readr)
+library(biobroom)
 
 gene_from_attr <- function(attr_string,
                            before="ID=",gene_str="[\\w-]+",after="_") {
@@ -212,7 +214,7 @@ dds_Ssd1bind30 <- DESeqDataSetFromMatrix(countData = counts_Ssd1bind30,
 resultsNames(dds_Ssd1bind30)
 
 results_Ssd1bind30 <- results(dds_Ssd1bind30, name="type_Ssd1_vs_RNA",
-                              lfcThreshold=1,alpha=0.05)
+                              lfcThreshold=2,alpha=0.05)
 
 results_Ssd1bind30
 
@@ -230,7 +232,7 @@ plotMA(results_Ssd1bind30, ylim=c(-5,5))
 
 ```{r plot_log2fc_Ssd1bind30LFC,dependson="create_dds_Ssd1bind30"}
 results_Ssd1bind30LFC <- lfcShrink(dds_Ssd1bind30, coef="type_Ssd1_vs_RNA", type="apeglm",
-                              lfcThreshold=1)
+                              lfcThreshold=2)
 
 results_Ssd1bind30LFC
 
@@ -239,6 +241,41 @@ plotMA(results_Ssd1bind30LFC, ylim=c(-5,5))
 ```
 
 This makes a difference for low-detected transcripts here.
+
+### Print estimates of log2 fold-change
+
+```{r tidy_log2fc_Ssd1bind30,dependson="create_dds_Ssd1bind30"}
+tresults_Ssd1bind30 <- biobroom::tidy.DESeqResults(results_Ssd1bind30)
+
+tresultsfile_30 <- "../results/Ssd1_targets_DeSeq2_30C.txt"
+
+readr::write_lines(c("# Ssd1_targets_DeSeq2_30C.txt",
+                     "# Analysis of Ssd1 enrichment at 30C, output from deseq2_Ssd1_CRAC_vs_RNAseq.Rmd",
+                     "# This table is the result of biobroom::tidy applied to DeSeq2 results, then ordered by descending log2-fold change",
+                     "# Edward.Wallace@ed.ac.uk, 5 Jan 2021",
+                     "# "),
+                   tresultsfile_30)
+
+tresults_Ssd1bind30 %>%
+  dplyr::arrange(desc(estimate)) %>%
+  readr::write_tsv(tresultsfile_30, col_names = TRUE, append = TRUE)
+
+enriched_Ssd1bind30 <- 
+  dplyr::filter(tresults_Ssd1bind30, estimate > 2, p.adjusted < 0.05) %>%
+  dplyr::arrange(desc(estimate))
+
+enriched_Ssd1bind30
+
+readr::write_lines(enriched_Ssd1bind30$gene,
+                   "../results/Ssd1_targets_DeSeq2_30C_4x_padj0p05_genesonly.txt")
+
+depleted_Ssd1bind30 <- 
+  dplyr::filter(tresults_Ssd1bind30, estimate < -1, p.adjusted < 0.05) %>%
+  dplyr::arrange(estimate)
+
+depleted_Ssd1bind30
+
+```
 
 
 ## Calculate enrichment in Ssd1-bound RNA at 42C
@@ -252,7 +289,7 @@ dds_Ssd1bind42 <- DESeqDataSetFromMatrix(countData = counts_Ssd1bind42,
 resultsNames(dds_Ssd1bind42)
 
 results_Ssd1bind42 <- results(dds_Ssd1bind42, name="type_Ssd1_vs_RNA",
-                              lfcThreshold=1,alpha=0.05)
+                              lfcThreshold=2,alpha=0.05)
 
 results_Ssd1bind42
 
@@ -271,7 +308,7 @@ plotMA(results_Ssd1bind42, ylim=c(-5,5))
 
 ```{r plot_log2fc_Ssd1bind42LFC,dependson="create_dds_Ssd1bind42"}
 results_Ssd1bind42LFC <- lfcShrink(dds_Ssd1bind42, coef="type_Ssd1_vs_RNA", type="apeglm",
-                              lfcThreshold=1)
+                              lfcThreshold=2)
 
 results_Ssd1bind42LFC
 
@@ -280,6 +317,47 @@ plotMA(results_Ssd1bind42LFC, ylim=c(-5,5))
 ```
 
 This makes a difference for low-detected transcripts here.
+
+### Print estimates of log2 fold-change
+
+```{r tidy_log2fc_Ssd1bind42,dependson="create_dds_Ssd1bind42"}
+tresults_Ssd1bind42 <- biobroom::tidy.DESeqResults(results_Ssd1bind42)
+
+tresultsfile_42 <- "../results/Ssd1_targets_DeSeq2_42C.txt"
+
+readr::write_lines(c("# Ssd1_targets_DeSeq2_42C.txt",
+                     "# Analysis of Ssd1 enrichment at 42C, output from deseq2_Ssd1_CRAC_vs_RNAseq.Rmd",
+                     "# This table is the result of biobroom::tidy applied to DeSeq2 results, then ordered by descending log2-fold change",
+                     "# Edward.Wallace@ed.ac.uk, 5 Jan 2021",
+                     "# "),
+                   tresultsfile_42)
+
+tresults_Ssd1bind42 %>%
+  dplyr::arrange(desc(estimate)) %>%
+  readr::write_tsv(tresultsfile_42, col_names = TRUE, append = TRUE)
+
+enriched_Ssd1bind42 <- 
+  dplyr::filter(tresults_Ssd1bind42, estimate > 2, p.adjusted < 0.05) %>%
+  dplyr::arrange(desc(estimate))
+
+enriched_Ssd1bind42
+
+readr::write_lines(enriched_Ssd1bind42$gene,
+                   "../results/Ssd1_targets_DeSeq2_42C_4x_padj0p05_genesonly.txt")
+
+depleted_Ssd1bind42 <- 
+  dplyr::filter(tresults_Ssd1bind42, estimate < -1, p.adjusted < 0.05) %>%
+  dplyr::arrange(estimate)
+
+depleted_Ssd1bind42
+```
+
+## Compare enriched genelists at 30C and 42C
+
+```{r compare_enriched3042,dependson=c("tidy_log2fc_Ssd1bind30","tidy_log2fc_Ssd1bind42")}
+intersect(enriched_Ssd1bind30$gene,enriched_Ssd1bind42$gene)
+```
+
 
 ## TO DO
 
