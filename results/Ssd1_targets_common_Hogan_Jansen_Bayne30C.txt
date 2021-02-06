@@ -1,0 +1,18 @@
+# Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt
+# Common targets of Ssd1 across 30C datasets, output from compare_target_transcripts.Rmd
+# This table is the result of intersecting hit tables from Hogan 2008, Jansen 2009, and Bayne 2021 (this paper) list in `Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+# Edward.Wallace@ed.ac.uk, 6 Feb 2021
+# 
+Gene	Name
+YBR162C	TOS1
+YCL051W	LRE1
+YGR279C	SCW4
+YHR143W	DSE2
+YIL123W	SIM1
+YKL101W	HSL1
+YKR042W	UTH1
+YLR190W	MMR1
+YLR286C	CTS1
+YMR305C	SCW10
+YNL066W	SUN4
+YOR247W	SRL1
