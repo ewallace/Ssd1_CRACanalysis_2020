@@ -24,6 +24,6 @@ https://www.yeastgenome.org/goTermFinder
 
 The GO Slim Mapper maps annotations of a group of genes to more general terms and/or bins them into broad categories, i.e. GO Slim terms. It is not enrichment.
 
-* `Ssd1_targets_DeSeq2_42C_component_GOenriched.txt`
-* `Ssd1_targets_DeSeq2_42C_function_GOenriched.txt`
-* `Ssd1_targets_DeSeq2_42C_process_GOenriched.txt`
+* `Ssd1_targets_DeSeq2_30C_component_slimTab.txt`
+* `Ssd1_targets_DeSeq2_30C_function_slimTab.txt`
+* `Ssd1_targets_DeSeq2_30C_process_slimTab.txt`
