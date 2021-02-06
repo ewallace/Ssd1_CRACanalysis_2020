@@ -1,4 +1,4 @@
-# GOslim
+# GOslim REDO THIS WITH UPDATED RESULTS 6th Feb!!!!
 
 Gene Ontology searches, using GO term finder v0.86 at saccharomyces genome database
 http://gotermfinder.yeastgenome.org/

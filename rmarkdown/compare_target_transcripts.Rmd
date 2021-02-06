@@ -1,7 +1,7 @@
 ---
 title: "Compare Ssd1 target transcripts against Hogan 2008, Jansen 2009, Hose 2020"
 author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
-date: "19 October 2020"
+date: "19 February 2021"
 output: 
     html_document:
         toc: true
@@ -15,7 +15,7 @@ This analysis takes the list of transcripts enriched in Ssd1 binding in the CRAC
 
 These publicly available data need to be downloaded to the `input_targets` directory, see `input_targets/README.md` for details.
 
-This script also relies on lists of Ssd1-enriched transcripts produced by `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, found in `results/Ssd1_targets_TPMratio4x_30C.txt`
+This script also relies on lists of Ssd1-enriched transcripts from DESeq2 analysis produced by `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`, found in `results/Ssd1_targets_TPMratio4x_30C.txt`
 and `results/Ssd1_targets_TPMratio4x_42C.txt`.
 
 ```{r setup, include=FALSE}
@@ -141,14 +141,16 @@ ssd1_data_bayne2020_42C <-
     readr::read_tsv("../results/Ssd1_targets_TPMratio4x_42C.txt")
 
 ssd1_targets_bayne2020_30C <- 
-    ssd1_data_bayne2020_30C %>%
-    filter(!is.na(Name)) %>%
-    pull(Gene)
+    # ssd1_data_bayne2020_30C %>%
+    # filter(!is.na(Name)) %>%
+    # pull(Gene)
+  read_lines("../results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt")
 
 ssd1_targets_bayne2020_42C <- 
-    ssd1_data_bayne2020_42C %>%
-    filter(!is.na(Name)) %>%
-    pull(Gene)
+    # ssd1_data_bayne2020_42C %>%
+    # filter(!is.na(Name)) %>%
+    # pull(Gene)
+  read_lines("../results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt")
 ```
 
 
@@ -186,7 +188,7 @@ gene_name_df <-
   select(Gene=orf,Name=gene)
 ```
 
-Then find the intersection. Generously, we are taking 4x enriched targets in Bayne 2020 at either 30 or 42C.
+Then find the intersection. We are taking 2x enriched targets with FDR 5%, in Bayne 2020 at either 30 or 42C.
 
 ```{r Ssd1_11commontargets,results="show"}
 ssd1_targets_11common <- 
