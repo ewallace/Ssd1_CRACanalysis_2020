@@ -457,6 +457,121 @@ ggsave("../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf",
        plot_Ssd1_vs_RNA_colourlabels, width = 6, height = 3.2)
 ```
 
+# Which proportion of Ssd1-associated reads are in specific Gene categories
+
+### Ssd1-enriched targets have almost half the Ssd1 reads at 30°C, from 4.5% of RNA reads.
+
+```{r Ssd1_targets_totalreadcounts}
+Ssd1_targets_DESeq2_2x_p0p05$Gene %>% unique %>% length
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% Ssd1_targets_DESeq2_2x_p0p05$Gene) %>%
+  summarise_if(is.numeric,sum)
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% Ssd1_targets_DESeq2_2x_p0p05$Gene) %>%
+  summarise_if(is.numeric,sum)
+
+filter(Ssd1_targets_DESeq2_2x_p0p05,Condition == "30°C") %>% nrow()
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% filter(Ssd1_targets_DESeq2_2x_p0p05,Condition == "30°C")$Gene) %>%
+  summarise_if(is.numeric,sum)
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% filter(Ssd1_targets_DESeq2_2x_p0p05,Condition == "30°C")$Gene) %>%
+  summarise_if(is.numeric,sum)
+```
+
+This says that, of the 189 genes which are classified as enriched in Ssd1 binding at 30°C, they have 4.5% of the RNA reads and 43% (mean) of Ssd1-associated reads at 30°C. 
+
+The proportion is smaller at 42°C, and their number of read counts go down.
+
+
+## About 35% of Ssd1 reads are on Cell Wall proteins, by GO term
+
+```{r load_cell_wall_enrichment}
+GOterms_process <- read_tsv("../results/GOterms/Ssd1_targets_DeSeq2_30C_process_GOenriched.txt")
+GOterms_component <- read_tsv("../results/GOterms/Ssd1_targets_DeSeq2_30C_component_GOenriched.txt")
+
+cworg_genes <- GOterms_process %>%
+  filter(TERM == "cell wall organization") %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist()
+
+cperi_genes <- GOterms_component %>%
+  filter(TERM == "cell periphery") %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist() %>%
+  unique()
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% cworg_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% cworg_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% cperi_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% cperi_genes) %>%
+  summarise_if(is.numeric,sum)
+
+```
+
+So at 30°C, about 35% of all Ssd1 reads are on these 35 Cell wall genes, which have only 3% of the mRNAs.
+At 42°C, it's more like 24% of Ssd1 reads from 2% of mRNAs.
+
+### Expanding the list for other enriched categories doesn't make a huge difference
+
+```{r cellwalletc_enrichment}
+cellwallsurfaceperimem_genes <- 
+  GOterms_component %>%
+  filter(TERM %in% c("fungal-type cell wall", 
+                     "cell wall",
+                     "cell periphery",
+                     "external encapsulating structure",
+                     "extracellular region",
+                     "cell surface",
+                     "anchored component of membrane")
+         ) %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist()
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% cellwallsurfaceperimem_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% cellwallsurfaceperimem_genes) %>%
+  summarise_if(is.numeric,sum)
+```
+
+## Although vacuole GO terms are enriched, all the high-count genes are also annotated to the cell wall.
+
+```{r vacuole_enrichment}
+vacuole_genes <- 
+  GOterms_component %>%
+  filter(str_detect(TERM,"vacuole")
+         ) %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist()
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% vacuole_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% setdiff(vacuole_genes,cworg_genes)) %>%
+  summarise_if(is.numeric,sum)
+```
+
 
 ## Session Info
 
