@@ -15,8 +15,11 @@ This analysis takes the list of transcripts enriched in Ssd1 binding in the CRAC
 
 These publicly available data need to be downloaded to the `input_targets` directory, see `input_targets/README.md` for details.
 
-This script also relies on lists of Ssd1-enriched transcripts from DESeq2 analysis produced by `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`, found in `results/Ssd1_targets_TPMratio4x_30C.txt`
-and `results/Ssd1_targets_TPMratio4x_42C.txt`.
+This script also relies on lists of Ssd1-enriched transcripts from DESeq2 analysis produced by `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`, found in `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+and `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`.
+
+The script outputs
+* `results/Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt`
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.path="figure/compare_target_transcripts-")
@@ -202,4 +205,12 @@ readr::write_lines(c("# Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt",
 
 dplyr::filter(gene_name_df,Gene %in% ssd1_targets_common) %>%
   readr::write_tsv(ssd1_targets_common_file, col_names = TRUE, append = TRUE)
+```
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
 ```

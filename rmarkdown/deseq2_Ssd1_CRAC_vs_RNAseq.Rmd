@@ -12,8 +12,12 @@ output:
 This script analyses relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data. We use the DeSeq2 package for differential expression analysis, here to analyse differential enrichment of Ssd1-bound transcripts. We report enriched genes for each analysis, using as cutoff 2x enrichment (log2-fold change of 1) with an adjusted p-value 0.05 (5% FDR). 
 
 Output files
-* 
-* 
+
+* `results/Ssd1_enrichment_DeSeq2_30C.txt`
+* `results/Ssd1_enrichment_DeSeq2_42C.txt`
+* `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+* `results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt`
+* `figure_out/deseq2_Ssd1_CRAC_enrichment_suppfigure.png` - supplementary figure
 
 This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details. 
 
@@ -406,7 +410,7 @@ volcano_42C <-
          aes(x=estimate,y=-log10(p.value))) +
   geom_point(colour = "grey50",size = 0.5) +
   geom_point(data = enriched_Ssd1bind42,
-             colour = "red") +
+             colour = "goldenrod") +
   scale_y_continuous(breaks = c(0,5,10),
                      limits = c(0,10), 
                      expand = c(0.01,0.01), 
@@ -447,8 +451,8 @@ plot_compare_foldchange3042 <-
   coord_equal() + 
   scale_colour_manual("2x enriched,\n5% FDR",
                       values = c("30°C only" = "blue",
-                                 "42°C only" = "red",
-                                 "both" = "purple4")) + 
+                                 "42°C only" = "goldenrod",
+                                 "both" = "cyan3")) + 
   labs(x = "log2-fold enrichment, 30°C",y = "log2-fold enrichment, 42°C")
 
 plot_compare_foldchange3042
@@ -474,8 +478,8 @@ ggplot(data = tresults_joined_basemean150, aes(x = estimate.30, y = estimate.42)
              aes(colour = "both")) + 
   scale_colour_manual("2x enriched,\n5% FDR",
                       values = c("30C only" = "blue",
-                                 "42C only" = "red",
-                                 "both" = "purple4")) + 
+                                 "42C only" = "goldenrod",
+                                 "both" = "cyan3")) + 
   coord_equal() + 
   labs(x = "log2-fold enrichment, 30°C",y = "log2-fold enrichment, 42°C",
        title = "Ssd1 enrichment, well-detected mRNAs")
@@ -527,10 +531,13 @@ tresults_joined %>%
 
 ## Print supplementary figure with volcano plots and correlations
 
-```{r enrichment_DEseq2_suppfigure,fig.height=4,fig.width=9,units="in"}
+```{r enrichment_DEseq2_suppfigure,dependson=c("Ssd1_volcano_30C","Ssd1_volcano_42C","compare_foldchange3042"),fig.height=4,fig.width=9,units="in"}
 plot_grid(plot_grid(volcano_30C, volcano_42C, ncol = 1, labels = c("A","B")),
           plot_compare_foldchange3042,
           ncol = 2, rel_widths = c(4,5), labels = c("","C"))
+
+ggsave("../figure_out/deseq2_Ssd1_CRAC_enrichment_suppfigure.png",
+       width = 9, height = 4)
 ```
 
 Ssd1 enrichment, results of DESeq2 analysis comparing Ssd1-bound RNA (CRAC) with poly(A)-RNA-seq.
