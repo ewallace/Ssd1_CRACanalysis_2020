@@ -1,0 +1,555 @@
+---
+title: "DeSeq2 analysis of Ssd1 enrichment compared to RNA-seq, on full-length transcripts"
+author: "Edward Wallace"
+date: "6th Feb 2021"
+output: 
+  html_document:
+    toc: true
+---
+
+# Summary
+
+This script analyses relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data. We use the DeSeq2 package for differential expression analysis, here to analyse differential enrichment of Ssd1-bound transcripts. We report enriched genes for each analysis, using as cutoff 2x enrichment (log2-fold change of 1) with an adjusted p-value 0.05 (5% FDR). 
+
+Output files
+
+* `results/Ssd1_enrichment_DeSeq2_30C.txt`
+* `results/Ssd1_enrichment_DeSeq2_42C.txt`
+* `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+* `results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt`
+* `figure_out/deseq2_Ssd1_CRAC_enrichment_suppfigure.png` - supplementary figure
+
+This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details. 
+
+This script also relies on RNA-seq transcript counts produced by `multiBamCov` running `process_RNAseq.Rmd`, found in `results/RNAseq_stressmatched_transcriptcounts.txt`. It must be run after `process_RNAseq.Rmd`.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE, warning=FALSE, message=FALSE,
+                      cache.path = "cache/deseq2_Ssd1_CRAC-",
+                      fig.path = "figure/deseq2_Ssd1_CRAC-")
+
+# library(tidyverse)
+# library(cowplot)
+# theme_set(theme_cowplot(font_size=11) %+replace% 
+#             theme(strip.background=element_blank(),
+#                   panel.border = element_rect(color = "grey85", fill = NA)))
+library(DESeq2)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(cowplot)
+library(biobroom)
+
+theme_set(
+  theme_cowplot(font_size = 12) +
+    theme(panel.grid.major = element_line(colour = "grey80", size = 0.5))
+)
+
+gene_from_attr <- function(attr_string,
+                           before="ID=",gene_str="[\\w-]+",after="_") {
+    # pull a gene name from an attribute string
+    match_str = paste0(before,gene_str,after)
+    attr_string %>%
+        stringr::str_extract(match_str) %>%
+        stringr::str_remove(before) %>%
+        stringr::str_remove(after)
+}
+
+# setwd("/homes/ewallac2/Repos/Ssd1_CRACanalysis_2020/rmarkdown")
+```
+
+# Testing RNA-seq count data alone
+
+## Load RNA-seq count data
+
+```{r load_RNAseq_count}
+counts_RNA_stranded <- readr::read_tsv("../results/RNAseq_stressmatched_transcriptcounts.txt",
+                                comment = "#")  %>%
+  dplyr::mutate(Gene=gene_from_attr(attributes))
+
+```
+
+## Test DeSeq2 on RNA-seq data, 30C vs 42C
+
+Setup and run DeSeq2 analysis on heat-shock data for RNA alone, to confirm we can recover the expected heat shock response.
+
+```{r create_dds_RNA,dependson="load_RNAseq_count"}
+sampledata_RNAheat <- 
+  data.frame(
+    sample = c("RNA_A_30","RNA_B_30","RNA_E_42","RNA_F_42"),
+    temperature = c("30","30","42","42"),
+    batch = c("A","B","A","B")) %>%
+  magrittr::set_rownames(.$sample)
+
+counts_RNAheat <-
+  dplyr::select(counts_RNA_stranded, sampledata_RNAheat$sample) %>%
+  magrittr::set_rownames(counts_RNA_stranded$Gene)
+
+dds_RNAheat <- DESeqDataSetFromMatrix(countData = counts_RNAheat,
+                              colData = sampledata_RNAheat,
+                              design = ~ temperature) %>%
+  DESeq()
+
+resultsNames(dds_RNAheat)
+
+results_RNAheat <- results(dds_RNAheat, name="temperature_42_vs_30")
+
+results_RNAheat
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_RNAheat,dependson="create_dds_RNA"}
+plotMA(results_RNAheat, ylim=c(-5,5))
+```
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_RNAheatLFC,dependson="create_dds_RNA"}
+results_RNAheatLFC <- lfcShrink(dds_RNAheat, coef="temperature_42_vs_30", type="apeglm")
+
+results_RNAheatLFC
+
+plotMA(results_RNAheatLFC, ylim=c(-5,5))
+
+```
+
+This shrinkage makes little difference.
+
+
+# Testing Ssd1-bound data alone
+
+## Load Ssd1-bound genewise counts
+
+```{r load_Ssd1_counts}
+counts_Ssd1_stranded <- readr::read_tsv("../Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt",
+                                 comment = "#") %>% 
+  dplyr::mutate(Gene=gene_from_attr(attributes))%>%
+  dplyr::select(Gene,seqname,feature,start,end,attributes,
+         Ssd1_3_30 = `20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30.bam`,
+         Ssd1_4_30 = `20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30.bam`,
+         Ssd1_3_42 = `20190114_Ssd1_CRAC_trimmed_NNNAGAGC_SSD1_3_42.bam`,
+         Ssd1_4_42 = `20190114_Ssd1_CRAC_trimmed_NNNCTAGC_SSD1_4_42.bam`, 
+         BY4741 = `20190114_Ssd1_CRAC_trimmed_NNNGACTTAGC_BY4741.bam`) 
+```
+
+```{r show_Ssd1_counts,dependson="load_Ssd1_counts"}
+counts_Ssd1_stranded
+```
+
+## Test DeSeq2 on Ssd1 vs RNA-seq data, 30C vs 42C
+
+```{r create_dds_Ssd1heat,dependson=c("create_dds_RNA","load_Ssd1_counts")}
+sampledata_Ssd1heat <- 
+  data.frame(
+    sample = c("Ssd1_3_30","Ssd1_4_30","Ssd1_3_42","Ssd1_4_42"),
+    temperature = c("30","30","42","42"),
+    batch = c("3","4","3","4")) %>%
+  magrittr::set_rownames(.$sample)
+
+counts_Ssd1heat <-
+  dplyr::select(counts_Ssd1_stranded, sampledata_Ssd1heat$sample) %>%
+  magrittr::set_rownames(counts_Ssd1_stranded$Gene)
+
+dds_Ssd1heat <- DESeqDataSetFromMatrix(countData = counts_Ssd1heat,
+                              colData = sampledata_Ssd1heat,
+                              design = ~ temperature) %>%
+  DESeq()
+
+resultsNames(dds_Ssd1heat)
+
+results_Ssd1heat <- results(dds_Ssd1heat, name="temperature_42_vs_30")
+
+results_Ssd1heat
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_Ssd1heat,dependson="create_dds_Ssd1"}
+plotMA(results_Ssd1heat, ylim=c(-5,5))
+```
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_Ssd1heatLFC,dependson="create_dds_RNA"}
+results_Ssd1heatLFC <- lfcShrink(dds_Ssd1heat, coef="temperature_42_vs_30", type="apeglm")
+
+results_Ssd1heatLFC
+
+plotMA(results_Ssd1heatLFC, ylim=c(-5,5))
+
+```
+
+This makes a big difference for low-detected transcripts here, because the depth of (deduplicated) sequence counts is low.
+
+
+# Comparing Ssd1 CRAC to RNA-seq data to estimate enrichment in Ssd1-bound transcripts
+
+This is the key part of the script in terms of new results.
+
+## Setup enrichment in Ssd1-bound RNA
+
+```{r setup_dds_Ssd1bind,dependson=c("create_dds_RNAheat","create_dds_Ssd1heat")}
+# Describe samples for DESeq2
+sampledata_Ssd1bind <- 
+  data.frame(
+    sample = c("RNA_A_30","RNA_B_30","RNA_E_42","RNA_F_42",
+               "Ssd1_3_30","Ssd1_4_30","Ssd1_3_42","Ssd1_4_42"),
+    temperature = rep(c("30","30","42","42"),2),
+    batch = c("A","B","A","B", "3","4","3","4"),
+    type = rep(c("RNA","Ssd1"),each=4)
+    ) %>%
+  magrittr::set_rownames(.$sample)
+
+# Split into two data frames to describe samples separately at each temperature
+sampledata_Ssd1bind30 <- dplyr::filter(sampledata_Ssd1bind, temperature == "30")
+sampledata_Ssd1bind42 <- dplyr::filter(sampledata_Ssd1bind, temperature == "42")
+
+# Check that the Gene lists in two datasets are the same, throw and error if not
+stopifnot(all.equal(counts_RNA_stranded$Gene, counts_Ssd1_stranded$Gene))
+
+# Create DESeq2-format count data frame for 30C comparison
+counts_Ssd1bind30 <- cbind(
+  dplyr::select(counts_RNA_stranded, c("RNA_A_30","RNA_B_30")),
+  dplyr::select(counts_Ssd1_stranded, c("Ssd1_3_30","Ssd1_4_30"))) %>%
+  magrittr::set_rownames(counts_RNA_stranded$Gene)
+
+# Create DESeq2-format count data frame for 42C comparison
+counts_Ssd1bind42 <- cbind(
+  dplyr::select(counts_RNA_stranded, c("RNA_E_42","RNA_F_42")),
+  dplyr::select(counts_Ssd1_stranded, c("Ssd1_3_42","Ssd1_4_42"))) %>%
+  magrittr::set_rownames(counts_RNA_stranded$Gene)
+```
+
+## Calculate enrichment in Ssd1-bound RNA at 30C
+
+Here we run DESeq2 on the collected data to make the comparison between Ssd1-bound transcripts and total mRNA, only at 30C.
+
+```{r create_dds_Ssd1bind30,dependson="setup_dds_Ssd1bind"}
+# Run DESeq2
+dds_Ssd1bind30 <- DESeqDataSetFromMatrix(countData = counts_Ssd1bind30,
+                              colData = sampledata_Ssd1bind30,
+                              design = ~ type) %>%
+  DESeq()
+
+# Check that we made the correct comparison
+resultsNames(dds_Ssd1bind30)
+
+# Filter differentially bound genes with 2-fold change, adjusted p-value below 0.05
+results_Ssd1bind30 <- results(dds_Ssd1bind30, name="type_Ssd1_vs_RNA",
+                              lfcThreshold=1,alpha=0.05)
+
+results_Ssd1bind30
+
+summary(results_Ssd1bind30)
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_Ssd1bind30,dependson="create_dds_Ssd1bind30"}
+plotMA(results_Ssd1bind30, ylim=c(-5,5))
+```
+
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_Ssd1bind30LFC,dependson="create_dds_Ssd1bind30"}
+results_Ssd1bind30LFC <- lfcShrink(dds_Ssd1bind30, coef="type_Ssd1_vs_RNA", type="apeglm",
+                              lfcThreshold=1)
+
+results_Ssd1bind30LFC
+
+plotMA(results_Ssd1bind30LFC, ylim=c(-5,5))
+
+```
+
+This makes a difference for low-detected transcripts here.
+
+### Print estimates of log2 fold-change
+
+Write the output to a file that will be saved and used for future analysis.
+
+```{r tidy_log2fc_Ssd1bind30,dependson="create_dds_Ssd1bind30"}
+tresults_Ssd1bind30 <- biobroom::tidy.DESeqResults(results_Ssd1bind30)
+
+tresultsfile_30 <- "../results/Ssd1_enrichment_DeSeq2_30C.txt"
+
+readr::write_lines(c("# Ssd1_enrichment_DeSeq2_30C.txt",
+                     "# Analysis of Ssd1 enrichment at 30C, output from deseq2_Ssd1_CRAC_vs_RNAseq.Rmd",
+                     "# This table is the result of biobroom::tidy applied to DeSeq2 results, then ordered by descending log2-fold change",
+                     "# Edward.Wallace@ed.ac.uk, 6 Feb 2021",
+                     "# "),
+                   tresultsfile_30)
+
+tresults_Ssd1bind30 %>%
+  dplyr::arrange(desc(estimate)) %>%
+  readr::write_tsv(tresultsfile_30, col_names = TRUE, append = TRUE)
+
+enriched_Ssd1bind30 <- 
+  dplyr::filter(tresults_Ssd1bind30, estimate > 1, p.adjusted < 0.05) %>%
+  dplyr::arrange(desc(estimate))
+
+enriched_Ssd1bind30
+
+readr::write_lines(enriched_Ssd1bind30$gene,
+                   "../results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt")
+
+depleted_Ssd1bind30 <- 
+  dplyr::filter(tresults_Ssd1bind30, estimate < -1, p.adjusted < 0.05) %>%
+  dplyr::arrange(estimate)
+
+depleted_Ssd1bind30
+
+```
+
+### Make Volcano plot
+
+```{r Ssd1_volcano_30C,dependson = "tidy_log2fc_Ssd1bind30"}
+volcano_30C <- 
+  ggplot(data = tresults_Ssd1bind30, 
+         aes(x=estimate,y=-log10(p.value))) +
+  geom_point(colour = "grey50",size = 0.5) +
+  geom_point(data = enriched_Ssd1bind30,
+             colour = "blue") +
+  scale_y_continuous(breaks = c(0,5,10),
+                     limits = c(0,10), 
+                     expand = c(0.01,0.01), 
+                     oob = scales::squish) +
+  labs(x = "log2-fold enrichment",
+       title = "DESeq2 results at 30°C")
+
+volcano_30C
+```
+
+We ran Gene Ontology analysis using SGD's webform, and put the results in `/results/GOslim`. TO UPDATE
+
+
+## Calculate enrichment in Ssd1-bound RNA at 42C
+
+Here we run DESeq2 again as above, but only comparing the data at 42C.
+
+```{r create_dds_Ssd1bind42,dependson="setup_dds_Ssd1bind"}
+dds_Ssd1bind42 <- DESeqDataSetFromMatrix(countData = counts_Ssd1bind42,
+                              colData = sampledata_Ssd1bind42,
+                              design = ~ type) %>%
+  DESeq()
+
+resultsNames(dds_Ssd1bind42)
+
+results_Ssd1bind42 <- results(dds_Ssd1bind42, name="type_Ssd1_vs_RNA",
+                              lfcThreshold=1,alpha=0.05)
+
+results_Ssd1bind42
+
+summary(results_Ssd1bind42)
+
+```
+
+### Plot log2-fold-change
+
+```{r plot_log2fc_Ssd1bind42,dependson="create_dds_Ssd1bind42"}
+plotMA(results_Ssd1bind42, ylim=c(-5,5))
+```
+
+
+### Estimate and plot log2-fold-change with shrinkage estimator
+
+```{r plot_log2fc_Ssd1bind42LFC,dependson="create_dds_Ssd1bind42"}
+results_Ssd1bind42LFC <- lfcShrink(dds_Ssd1bind42, coef="type_Ssd1_vs_RNA", type="apeglm",
+                              lfcThreshold=1)
+
+results_Ssd1bind42LFC
+
+plotMA(results_Ssd1bind42LFC, ylim=c(-5,5))
+
+```
+
+The shrinkage makes a difference for low-detected transcripts here.
+
+
+### Print estimates of log2 fold-change
+
+```{r tidy_log2fc_Ssd1bind42,dependson="create_dds_Ssd1bind42"}
+tresults_Ssd1bind42 <- biobroom::tidy.DESeqResults(results_Ssd1bind42)
+
+tresultsfile_42 <- "../results/Ssd1_enrichment_DeSeq2_42C.txt"
+
+readr::write_lines(c("# Ssd1_enrichment_DeSeq2_42C.txt",
+                     "# Analysis of Ssd1 enrichment at 42C, output from deseq2_Ssd1_CRAC_vs_RNAseq.Rmd",
+                     "# This table is the result of biobroom::tidy applied to DeSeq2 results, then ordered by descending log2-fold change",
+                     "# Edward.Wallace@ed.ac.uk, 6 Feb 2021",
+                     "# "),
+                   tresultsfile_42)
+
+tresults_Ssd1bind42 %>%
+  dplyr::arrange(desc(estimate)) %>%
+  readr::write_tsv(tresultsfile_42, col_names = TRUE, append = TRUE)
+
+enriched_Ssd1bind42 <- 
+  dplyr::filter(tresults_Ssd1bind42, estimate > 1, p.adjusted < 0.05) %>%
+  dplyr::arrange(desc(estimate))
+
+enriched_Ssd1bind42
+
+readr::write_lines(enriched_Ssd1bind42$gene,
+                   "../results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt")
+
+depleted_Ssd1bind42 <- 
+  dplyr::filter(tresults_Ssd1bind42, estimate < -1, p.adjusted < 0.05) %>%
+  dplyr::arrange(estimate)
+
+depleted_Ssd1bind42
+```
+
+### Make Volcano plot
+
+```{r Ssd1_volcano_42C,dependson = "tidy_log2fc_Ssd1bind42"}
+volcano_42C <- 
+  ggplot(data = tresults_Ssd1bind42, 
+         aes(x=estimate,y=-log10(p.value))) +
+  geom_point(colour = "grey50",size = 0.5) +
+  geom_point(data = enriched_Ssd1bind42,
+             colour = "goldenrod") +
+  scale_y_continuous(breaks = c(0,5,10),
+                     limits = c(0,10), 
+                     expand = c(0.01,0.01), 
+                     oob = scales::squish) +
+  labs(x = "log2-fold enrichment",
+       title = "DESeq2 results at 42°C")
+
+volcano_42C
+```
+
+
+## Compare results at 30C and 42C
+
+### Check correlations in fold change (binding enrichment) between 30C and 42C data.
+
+
+```{r compare_foldchange3042,dependson=c("tidy_log2fc_Ssd1bind30","tidy_log2fc_Ssd1bind42")}
+tresults_joined <- dplyr::full_join(tresults_Ssd1bind30, tresults_Ssd1bind42, 
+                                    by = "gene", suffix = c(".30",".42"))
+
+cor(tresults_joined$estimate.30, tresults_joined$estimate.42, 
+    use = "pairwise.complete.obs")
+
+enriched_intersect   <- intersect(enriched_Ssd1bind30$gene, enriched_Ssd1bind42$gene)
+enriched_30Conly <- setdiff(enriched_Ssd1bind30$gene, enriched_Ssd1bind42$gene)
+enriched_42Conly <- setdiff(enriched_Ssd1bind42$gene, enriched_Ssd1bind30$gene)
+
+plot_compare_foldchange3042 <- 
+  ggplot(data = tresults_joined, aes(x = estimate.30, y = estimate.42)) +
+  geom_abline(slope = 1, intercept = 0, size = 0.5, linetype = "dashed") + 
+  geom_point(colour = "grey50",size = 0.5) +
+  geom_point(data = dplyr::filter(tresults_joined, gene %in% enriched_30Conly),
+             aes(colour = "30°C only")) + 
+  geom_point(data = dplyr::filter(tresults_joined, gene %in% enriched_42Conly),
+             aes(colour = "42°C only")) + 
+  geom_point(data = dplyr::filter(tresults_joined, gene %in% enriched_intersect),
+             aes(colour = "both")) + 
+  coord_equal() + 
+  scale_colour_manual("2x enriched,\n5% FDR",
+                      values = c("30°C only" = "blue",
+                                 "42°C only" = "goldenrod",
+                                 "both" = "cyan3")) + 
+  labs(x = "log2-fold enrichment, 30°C",y = "log2-fold enrichment, 42°C")
+
+plot_compare_foldchange3042
+```
+
+Correlations overall are not great, reflecting low depth of sequencing.
+
+### Restricting to well-detected genes improves correlation in binding enrichment
+
+If we restrict to abundant genes (roughly above median value) then correlations are high.
+So lack of correlation is driven by low coverage.
+
+```{r compare_foldchange3042_basemean150,dependson="compare_foldchange3042"}
+tresults_joined_basemean150 <- 
+  dplyr::filter(tresults_joined, baseMean.30 > 150, baseMean.42 > 150)
+
+cor(tresults_joined_basemean150$estimate.30, tresults_joined_basemean150$estimate.42, 
+    use = "pairwise.complete.obs")
+
+ggplot(data = tresults_joined_basemean150, aes(x = estimate.30, y = estimate.42)) +
+  geom_point(colour = "grey50",size = 0.5) +
+  geom_point(data = dplyr::filter(tresults_joined, gene %in% enriched_intersect),
+             aes(colour = "both")) + 
+  scale_colour_manual("2x enriched,\n5% FDR",
+                      values = c("30C only" = "blue",
+                                 "42C only" = "goldenrod",
+                                 "both" = "cyan3")) + 
+  coord_equal() + 
+  labs(x = "log2-fold enrichment, 30°C",y = "log2-fold enrichment, 42°C",
+       title = "Ssd1 enrichment, well-detected mRNAs")
+```
+
+### Compare enriched genelists at the two temperatures
+
+Lists of enriched genes can differ between conditions because the enrichment "really" changes, or because the coverage changes and the results cross the noise threshold.
+
+```{r enriched_venn,dependson=c("tidy_log2fc_Ssd1bind30","tidy_log2fc_Ssd1bind42"),fig.width=4,fig.height=3.8}
+library(VennDiagram)
+venn <- function(...) {
+    venn.diagram(x=list(...),filename=NULL,margin=0.1) %>% grid.draw
+}
+venn("30C"=enriched_Ssd1bind30$gene,
+     "42C"=enriched_Ssd1bind42$gene)
+```
+
+### Enriched at both temperatures
+
+```{r enriched_30and42,dependson=c("compare_foldchange3042")}
+tresults_joined %>%
+  dplyr::filter(gene %in% enriched_Ssd1bind30$gene, gene %in% enriched_Ssd1bind42$gene) %>%
+  dplyr::select(gene, estimate.30, estimate.42, baseMean.30, baseMean.42) %>%
+  dplyr::arrange(desc(estimate.30)) %>%
+  print(n = 50)
+```
+
+
+### What are the outliers? Genes enriched at 30C, not at 42C?
+
+```{r enriched_30not42,dependson="compare_foldchange3042"}
+tresults_joined %>%
+  dplyr::filter(gene %in% enriched_Ssd1bind30$gene, ! gene %in% enriched_Ssd1bind42$gene) %>%
+  dplyr::select(gene, estimate.30, estimate.42, baseMean.30, baseMean.42) %>%
+  dplyr::arrange(desc(estimate.30)) %>%
+  print(n = 40)
+```
+
+### What are the outliers? Genes enriched at 42C, not at 30C?
+
+```{r enriched_42not30,dependson="compare_foldchange3042"}
+tresults_joined %>%
+  dplyr::filter(!gene %in% enriched_Ssd1bind30$gene, gene %in% enriched_Ssd1bind42$gene) %>%
+  dplyr::select(gene, estimate.30, estimate.42, baseMean.30, baseMean.42) %>%
+  dplyr::arrange(desc(estimate.42)) %>%
+  print(n = 40)
+```
+
+## Print supplementary figure with volcano plots and correlations
+
+```{r enrichment_DEseq2_suppfigure,dependson=c("Ssd1_volcano_30C","Ssd1_volcano_42C","compare_foldchange3042"),fig.height=4,fig.width=9,units="in"}
+plot_grid(plot_grid(volcano_30C, volcano_42C, ncol = 1, labels = c("A","B")),
+          plot_compare_foldchange3042,
+          ncol = 2, rel_widths = c(4,5), labels = c("","C"))
+
+ggsave("../figure_out/deseq2_Ssd1_CRAC_enrichment_suppfigure.png",
+       width = 9, height = 4)
+```
+
+Ssd1 enrichment, results of DESeq2 analysis comparing Ssd1-bound RNA (CRAC) with poly(A)-RNA-seq.
+A, Volcano plot comparing log2-fold change with p value for every mRNA measured at 30°C 
+Enriched genes with over 2x enrichment at 5% FDR are highlighted; p values below 10^-10 are squished for display.
+B, Volcano plot at 42°C.
+C, Comparison of Ssd1 log2-fold enrichment at 30°C and 42°C.
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
+```

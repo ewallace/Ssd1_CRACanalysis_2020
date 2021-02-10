@@ -1,7 +1,7 @@
 ---
 title: "Ssd1 enrichment from normalizing to RNA-seq on full-length transcripts"
 author: "Edward Wallace"
-date: "17th Oct 2020"
+date: "6th Feb 2020"
 output: 
   html_document:
     toc: true
@@ -9,17 +9,22 @@ output:
 
 # Summary
 
-This script is to analyse relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data. Then we crudely normalize Ssd1 *counts* against RNA-seq on full-length transcripts.
+This script is to make figures of relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data, crudely normalized to transcripts per million (TPM) on full-length transcripts.
 
 This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details. 
 
-This script also relies on RNA-seq transcript counts produced by `multiBamCov` running `process_RNAseq.Rmd`, found in `results/RNAseq_stressmatched_transcriptcounts.txt`. It must be run after `process_RNAseq.Rmd`.
+This script also relies on RNA-seq transcript counts in `results/RNAseq_stressmatched_transcriptcounts.txt` produced by `multiBamCov`, running in `process_RNAseq.Rmd`. So this script must be run after `process_RNAseq.Rmd`.
+
+Some of the figures rely on the lists of enriched genes from DESeq2 analysis, produced by the script `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`:
+* `Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+* `Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt`
 
 This analysis shows that:
 
+* RNA-seq reads are highly reproducible between replicates
+* Ssd1 reads are quite reproducible, but have low coverage
 * The highest-enriched targets of Ssd1 are mRNAs encoding cell wall proteins.
 * Stress protein mRNAs that are most induced by heat shock are *not enriched* in Ssd1 binding, although they are bound by Ssd1.
-* Some unexpected genes are enriched in Ssd1 binding under heat stress, including HOR7, SOD1, NRG2.
 
 Both RNAseq and Ssd1-CRAC are quantified on *full-length estimated unspliced transcripts* using bedtools multicov after genomic alignment with novoalign. This has some problems. For example, reads on 2 overlapping transcripts are counted on *both*, if the UTRs or ORFs overlap.
 
@@ -28,6 +33,7 @@ Note that this analysis:
 * is restricted to mRNAs encoding verified ORFs froms nuclear chromosomes: no mitochondrial chromosome or ncRNAs.
 * uses Pelechano 2013 "most abundant" annotation of transcript ends, and adds a default 25nt 5'UTR and 125nt 3'UTR for transcripts not annotated in Pelechano 2013.
 * normalises count density by transcript length, to give Transcripts Per Million (TPM).
+* has different goals and a cruder statistical model than the DESeq2 analysis in `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`.
 
 
 ```{r setup, include=FALSE}
@@ -60,9 +66,9 @@ gene_from_attr <- function(attr_string,
     # pull a gene name from an attribute string
     match_str = paste0(before,gene_str,after)
     attr_string %>%
-        str_extract(match_str) %>%
-        str_remove(before) %>%
-        str_remove(after)
+        stringr::str_extract(match_str) %>%
+        stringr::str_remove(before) %>%
+        stringr::str_remove(after)
 }
 
 scientific_10 <- function(x) {
@@ -112,20 +118,6 @@ tpms_RNA_stranded <-  counts_RNA_stranded %>%
             calc_tpm,
             eff_length = counts_RNA_stranded$end - counts_RNA_stranded$start)
 
-# counts_RNA_stranded_select_melt <- 
-#   counts_RNA_stranded %>% 
-#   select(Type,
-#          RNA_A_30,RNA_B_30, 
-#          RNA_C_GE,RNA_D_GE, 
-#          BY4741) %>%
-#   gather(-Type,key=Sample,value=Count) %>%
-#   mutate(Sample=factor(Sample,
-#                           levels=c("Ssd1_3_30","Ssd1_4_30",
-#                                    "Ssd1_3_42","Ssd1_4_42",
-#                                 "BY4741"),
-#                        labels=c("30C\nrepA","30C\nrepB",
-#                                    "42C\nrepA","42C\nrepB",
-#                                 "-ctrl")))
 ```
 
 ## Scatter plot shows genewise CPMS are VERY reproducible
@@ -158,7 +150,7 @@ tpms_RNA_stranded %>%
 ```
 
 
-# Comparing Ssd1 CRAC to RNA-seq data to estimate enrichment
+# Inspecting Ssd1-bound data at genewise level
 
 ## Load Ssd1-bound genewise counts
 
@@ -198,7 +190,7 @@ counts_Ssd1_stranded %>%
   ggpairs_genewise()
 ```
 
-This is not as good, due to relatively low coverage of deduplicated reads.
+This is not as reproducible as the RNA-seq, due to relatively low coverage of deduplicated reads.
 
 ## Ssd1-bound genewise TPMs are reproducible
 
@@ -215,6 +207,7 @@ tpms_Ssd1_stranded %>%
   ggpairs_genewise()
 ```
 
+# Compare Ssd1 CRAC to RNA-seq data to estimate crude enrichment
 
 ## Construct a single table containing Ssd1-bound and RNA-seq counts
 
@@ -285,6 +278,7 @@ tpm_join_bycondition <-
 tpm_join_bycondition
 ```
 
+
 ## Plot TPMs by condition, Ssd1-bound vs RNA, with some labels
 
 ```{r plot_Ssd1_vs_RNA_labels,dependson="mean_join_tpm",fig.height=3.2,fig.width=6}
@@ -310,7 +304,7 @@ ggplot(data=tpm_join_bycondition,aes(x=TPM.RNA,y=TPM.Ssd1)) +
 
 ## Ssd1-enriched genes by crude TPM ratios
 
-These are familiar: TOS1, TOS6, SUN4/SIM1/UTH1/SRL1, etc.
+These are familiar from other datasets: TOS1, TOS6, SUN4/SIM1/UTH1/SRL1, etc.
 
 ```{r enrich_Ssd1_vs_RNA,dependson="mean_join_tpm",results.show=TRUE}
 tpm_join_bycondition %>%
@@ -323,7 +317,7 @@ tpm_join_bycondition %>%
 ```
 
 
-### Make output files for Ssd1-enriched genes over 4x
+### Make output files for crude Ssd1-enriched genes over 4x
 
 We conservatively report transcripts that are at least 4-fold enriched in Ssd1 CRAC reads compared to RNA-seq, and with at least 20 TPM in the RNA-seq data. This filters out low-expressed genes with noisy counts.
 
@@ -388,22 +382,41 @@ tpm_join_bycondition %>%
 * YDR524C-B Putative protein of unknown function; SWAT-GFP and mCherry fusion proteins localize to the endoplasmic reticulum
 
 
-## Plot TPMs by condition, select genes labeled
+## Plot TPMs by condition, DEseq2-enriched genes labeled
 
 This is figure panel 4C of the manuscript, output to the file `../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf`.
 
 ```{r plot_Ssd1_vs_RNA_colourlabels,dependson="mean_join_tpm",fig.height=3.2,fig.width=6}
-Ssd1_targets_select <- c("CTS1", "DSE2", "SIM1", "SUN4", "TOS1", "UTH1", "HSP150", "SCW4", "LRE1", "SRL1", "CCW12", "NCA3", "CIS3", "MMR1", "CWP2", "HOR7", "SPO24")
+# We had a longer and harder to follow list of 16 targets, that is commented out here; slimmed down to 8 select for a more readable figure
+# Ssd1_common_targets_df <-
+#   readr::read_tsv("../results/Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt",
+#                   comment = "#")
+# 
+# Ssd1_targets_16select <- c(Ssd1_common_targets_df$Name, c("CCW12","CWP2","SPO24","NCA3"))
 
-HSPs_select <- c("HSP26","HSP42","HSP104","SSA1","SSA2","SSA3","SSA4")
+Ssd1_targets_8select <- c("CTS1","DSE2","SIM1","SUN4","UTH1","SCW4","CCW12","SRL1")
+
+Ssd1_targets_DESeq2_2x_p0p05 <- bind_rows(
+  tibble(Gene = readr::read_lines("../results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt"),
+         Condition = "30"),
+  tibble(Gene = readr::read_lines("../results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt"),
+         Condition = "42")) %>%
+  dplyr::mutate(Condition = factor(Condition,
+                            levels = c("30","42"),
+                            labels = c("30°C","42°C")),
+                GType = "Ssd1_target"
+                )
+
+HSPs_select <- c("HSP42","HSP104","SSA1","SSA2","SSA3","SSA4")
 
 Abundant_genes_select <- c("TDH3")
 
 select_genetype_df <- bind_rows(
-  tibble(GType = "Ssd1_target", Name = Ssd1_targets_select),
+  tibble(GType = "Ssd1_target", Name = Ssd1_targets_8select),
   tibble(GType = "HSPs_select", Name = HSPs_select),
   tibble(GType = "Abundant", Name = Abundant_genes_select)
 )
+
 scale_colour_gtype <-
   scale_colour_manual(values = c(Ssd1_target = "blue2",
                                  HSPs_select = "red3",
@@ -412,19 +425,24 @@ scale_colour_gtype <-
 
 plot_Ssd1_vs_RNA_colourlabels <- 
 ggplot(data=tpm_join_bycondition,aes(x=TPM.RNA,y=TPM.Ssd1)) +
-  geom_point(size=0.2,colour="grey50") +
+  geom_point(size=0.15,colour="grey50") +
+  geom_point(
+    data = left_join(Ssd1_targets_DESeq2_2x_p0p05,
+                     tpm_join_bycondition),
+    aes(colour = "Ssd1_target"), 
+    size=0.45) +
   geom_point(
     data = left_join(select_genetype_df,
                      tpm_join_bycondition),
     aes(label=Name,colour=GType),
-    size=0.3) + 
+    size=0.45) + 
   ggrepel::geom_text_repel(
     data = left_join(select_genetype_df,
                      tpm_join_bycondition),
     aes(label=Name,colour=GType),
-    size=2.5,segment.size=0.1,force=0.15,min.segment.length=0.2,
+    size=2.5, segment.size=0.1, force=0.15, min.segment.length=0.05,
     # set random number seed so the labels go in the same place every time
-    seed = 41) + 
+    seed = 101) + 
   scale_colour_gtype + theme(legend.position = "none") + 
   scale_x_log10_sci("RNA-seq density (TPM)",
                 limits=c(5,max(tpm_join_bycondition$TPM.RNA)),
@@ -437,6 +455,121 @@ plot_Ssd1_vs_RNA_colourlabels
 
 ggsave("../figure_out/Ssd1CRAC_vs_RNAseq_TPM_colourlabels.pdf",
        plot_Ssd1_vs_RNA_colourlabels, width = 6, height = 3.2)
+```
+
+# Which proportion of Ssd1-associated reads are in specific Gene categories
+
+### Ssd1-enriched targets have almost half the Ssd1 reads at 30°C, from 4.5% of RNA reads.
+
+```{r Ssd1_targets_totalreadcounts}
+Ssd1_targets_DESeq2_2x_p0p05$Gene %>% unique %>% length
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% Ssd1_targets_DESeq2_2x_p0p05$Gene) %>%
+  summarise_if(is.numeric,sum)
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% Ssd1_targets_DESeq2_2x_p0p05$Gene) %>%
+  summarise_if(is.numeric,sum)
+
+filter(Ssd1_targets_DESeq2_2x_p0p05,Condition == "30°C") %>% nrow()
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% filter(Ssd1_targets_DESeq2_2x_p0p05,Condition == "30°C")$Gene) %>%
+  summarise_if(is.numeric,sum)
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% filter(Ssd1_targets_DESeq2_2x_p0p05,Condition == "30°C")$Gene) %>%
+  summarise_if(is.numeric,sum)
+```
+
+This says that, of the 189 genes which are classified as enriched in Ssd1 binding at 30°C, they have 4.5% of the RNA reads and 43% (mean) of Ssd1-associated reads at 30°C. 
+
+The proportion is smaller at 42°C, and their number of read counts go down.
+
+
+## About 35% of Ssd1 reads are on Cell Wall proteins, by GO term
+
+```{r load_cell_wall_enrichment}
+GOterms_process <- read_tsv("../results/GOterms/Ssd1_targets_DeSeq2_30C_process_GOenriched.txt")
+GOterms_component <- read_tsv("../results/GOterms/Ssd1_targets_DeSeq2_30C_component_GOenriched.txt")
+
+cworg_genes <- GOterms_process %>%
+  filter(TERM == "cell wall organization") %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist()
+
+cperi_genes <- GOterms_component %>%
+  filter(TERM == "cell periphery") %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist() %>%
+  unique()
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% cworg_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% cworg_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% cperi_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% cperi_genes) %>%
+  summarise_if(is.numeric,sum)
+
+```
+
+So at 30°C, about 35% of all Ssd1 reads are on these 35 Cell wall genes, which have only 3% of the mRNAs.
+At 42°C, it's more like 24% of Ssd1 reads from 2% of mRNAs.
+
+### Expanding the list for other enriched categories doesn't make a huge difference
+
+```{r cellwalletc_enrichment}
+cellwallsurfaceperimem_genes <- 
+  GOterms_component %>%
+  filter(TERM %in% c("fungal-type cell wall", 
+                     "cell wall",
+                     "cell periphery",
+                     "external encapsulating structure",
+                     "extracellular region",
+                     "cell surface",
+                     "anchored component of membrane")
+         ) %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist()
+
+tpms_RNA_stranded %>%
+  filter(Gene %in% cellwallsurfaceperimem_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% cellwallsurfaceperimem_genes) %>%
+  summarise_if(is.numeric,sum)
+```
+
+## Although vacuole GO terms are enriched, all the high-count genes are also annotated to the cell wall.
+
+```{r vacuole_enrichment}
+vacuole_genes <- 
+  GOterms_component %>%
+  filter(str_detect(TERM,"vacuole")
+         ) %>%
+  pull(ANNOTATED_GENES) %>%
+  str_split(", ") %>%
+  unlist()
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% vacuole_genes) %>%
+  summarise_if(is.numeric,sum)
+
+tpms_Ssd1_stranded %>%
+  filter(Gene %in% setdiff(vacuole_genes,cworg_genes)) %>%
+  summarise_if(is.numeric,sum)
 ```
 
 

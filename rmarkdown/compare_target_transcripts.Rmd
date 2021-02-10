@@ -1,7 +1,7 @@
 ---
 title: "Compare Ssd1 target transcripts against Hogan 2008, Jansen 2009, Hose 2020"
 author: "Edward Wallace, Edward.Wallace@ed.ac.uk"
-date: "19 October 2020"
+date: "19 February 2021"
 output: 
     html_document:
         toc: true
@@ -15,8 +15,11 @@ This analysis takes the list of transcripts enriched in Ssd1 binding in the CRAC
 
 These publicly available data need to be downloaded to the `input_targets` directory, see `input_targets/README.md` for details.
 
-This script also relies on lists of Ssd1-enriched transcripts produced by `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, found in `results/Ssd1_targets_TPMratio4x_30C.txt`
-and `results/Ssd1_targets_TPMratio4x_42C.txt`.
+This script also relies on lists of Ssd1-enriched transcripts from DESeq2 analysis produced by `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`, found in `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+and `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`.
+
+The script outputs
+* `results/Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt`
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE,fig.path="figure/compare_target_transcripts-")
@@ -59,9 +62,10 @@ ssd1_data_hogan2008
 
 ssd1_targets_hogan2008 <- 
     ssd1_data_hogan2008 %>%
-    filter(str_detect(Gene,"_ORF"),localfdr < 1) %>%
-    pull(Gene) %>%
-    str_remove("_.*") %>%
+    dplyr::filter(stringr::str_detect(Gene,"_ORF"), 
+                  localfdr < 1) %>%
+    dplyr::pull(Gene) %>%
+    stringr::str_remove("_.*") %>%
     unique
 ```
 
@@ -81,16 +85,16 @@ ssd1_data_jansen2009
 # Here we have to take some effort to get systematic names for all targets
 ssd1_genic_targets_jansen2009 <- 
     ssd1_data_jansen2009 %>%
-    filter(`inter/genic?`=="genic") %>%
-    pull(sys_id)
+    dplyr::filter(`inter/genic?`=="genic") %>%
+    dplyr::pull(sys_id)
 
 ssd1_intergenic_targets_jansen2009 <- 
     c(ssd1_data_jansen2009 %>%
-          filter(`inter/genic?`!="genic",`sys_id`==`left gene name`) %>%
-          pull(`left_gene sys id`),
+          dplyr::filter(`inter/genic?`!="genic",`sys_id`==`left gene name`) %>%
+          dplyr::pull(`left_gene sys id`),
       ssd1_data_jansen2009 %>%
-          filter(`inter/genic?`!="genic",`sys_id`==`right gene name`) %>%
-          pull(`right_gene sys id`)
+          dplyr::filter(`inter/genic?`!="genic",`sys_id`==`right gene name`) %>%
+          dplyr::pull(`right_gene sys id`)
     )
 
 ssd1_targets_jansen2009 <- unique( c(ssd1_genic_targets_jansen2009,
@@ -114,8 +118,8 @@ ssd1_data_hose2020
 
 ssd1_targets_hose2020 <- 
     ssd1_data_hose2020 %>%
-    filter(Bound=="yes") %>%
-    pull(Gene)
+    dplyr::filter(Bound=="yes") %>%
+    dplyr::pull(Gene)
 ```
 
 # Venn diagram of intersections
@@ -131,24 +135,14 @@ venn(Hogan=ssd1_targets_hogan2008,
 
 ## Bayne targets
 
-Removing dubious ORFs etc that don't have assigned gene names.
+From DESeq2 analysis.
 
-```{r bayne_targets}
-ssd1_data_bayne2020_30C <-
-    readr::read_tsv("../results/Ssd1_targets_TPMratio4x_30C.txt")
-
-ssd1_data_bayne2020_42C <-
-    readr::read_tsv("../results/Ssd1_targets_TPMratio4x_42C.txt")
-
+```{r Bayne_targets}
 ssd1_targets_bayne2020_30C <- 
-    ssd1_data_bayne2020_30C %>%
-    filter(!is.na(Name)) %>%
-    pull(Gene)
+  readr::read_lines("../results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt")
 
 ssd1_targets_bayne2020_42C <- 
-    ssd1_data_bayne2020_42C %>%
-    filter(!is.na(Name)) %>%
-    pull(Gene)
+  readr::read_lines("../results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt")
 ```
 
 
@@ -156,7 +150,7 @@ ssd1_targets_bayne2020_42C <-
 
 Ugly yet effective.
 
-```{r venn_hogan_jansen_hose_bayne,dependson=c("Hogan_targets","Jansen_targets","Hose_targets"),fig.width=5,fig.height=3.8}
+```{r venn_hogan_jansen_hose_bayne,dependson=c("Hogan_targets","Jansen_targets","Hose_targets","Bayne_targets"),fig.width=5,fig.height=3.8}
 venn(Hogan2008=ssd1_targets_hogan2008,
      Jansen2009=ssd1_targets_jansen2009,
      Hose2020=ssd1_targets_hose2020,
@@ -169,7 +163,7 @@ venn(Hogan2008=ssd1_targets_hogan2008,
 
 This is figure panel 4D of the manuscript.
 
-```{r venn_hogan_jansen_bayne,dependson=c("Hogan_targets","Jansen_targets"),dev="svg",fig.width=2,fig.height=2}
+```{r venn_hogan_jansen_bayne,dependson=c("Hogan_targets","Jansen_targets","Bayne_targets"),dev="svg",fig.width=2,fig.height=2}
 venn(Hogan2008=ssd1_targets_hogan2008,
      Jansen2009=ssd1_targets_jansen2009,
      Bayne30C=ssd1_targets_bayne2020_30C)
@@ -186,13 +180,37 @@ gene_name_df <-
   select(Gene=orf,Name=gene)
 ```
 
-Then find the intersection. Generously, we are taking 4x enriched targets in Bayne 2020 at either 30 or 42C.
+Then find the intersection. We are taking 2x enriched targets with FDR 5%, in Bayne 2020 at either 30 or 42C.
 
-```{r Ssd1_11commontargets,results="show"}
-ssd1_targets_11common <- 
+```{r Ssd1_commontargets,dependson=c("Hogan_targets","Jansen_targets","Bayne_targets","load_genenames"),results="show"}
+ssd1_targets_common <- 
     ssd1_targets_bayne2020_30C %>%
     intersect(ssd1_targets_hogan2008) %>%
     intersect(ssd1_targets_jansen2009)
     
-filter(gene_name_df,Gene %in% ssd1_targets_11common)
+dplyr::filter(gene_name_df,Gene %in% ssd1_targets_common)
+```
+
+## Write output file of common targets
+
+```{r Ssd1_commontargets_write,dependson="Ssd1_commontargets"}
+ssd1_targets_common_file <- "../results/Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt"
+
+readr::write_lines(c("# Ssd1_targets_common_Hogan_Jansen_Bayne30C.txt",
+                     "# Common targets of Ssd1 across 30C datasets, output from compare_target_transcripts.Rmd",
+                     "# This table is the result of intersecting hit tables from Hogan 2008, Jansen 2009, and Bayne 2021 (this paper) list in `Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`",
+                     "# Edward.Wallace@ed.ac.uk, 6 Feb 2021",
+                     "# "),
+                   ssd1_targets_common_file)
+
+dplyr::filter(gene_name_df,Gene %in% ssd1_targets_common) %>%
+  readr::write_tsv(ssd1_targets_common_file, col_names = TRUE, append = TRUE)
+```
+
+## Session Info
+
+Package versions, etc., that ran this file.
+
+```{r session_info,results="show",message=TRUE}
+sessionInfo()
 ```
