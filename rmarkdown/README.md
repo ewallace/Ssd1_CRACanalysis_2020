@@ -13,8 +13,23 @@ The script takes fastq files as input, and ends with a text-format coverage file
 It relies on genome sequences and transcript annotations from `input_annotation`, and uses the same novoalign index as `src/CRAC_pipeline_SE_demult_dedup.py`.
 
 This script runs completely independently of the CRAC pipeline.
-It needs to be run before `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, which relies on the transcript counts that this script outputs.
+It needs to be run before `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd` and `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, which rely on the transcript counts that this script outputs.
 
+## deseq2_Ssd1_CRAC_vs_RNAseq.Rmd
+
+This script analyses relative *enrichment* of Ssd1 on mRNA, by processing time & condition matched RNA seq and Ssd1 CRAC data. We use the DeSeq2 package for differential expression analysis, here to analyse differential enrichment of Ssd1-bound transcripts. We report enriched genes for each analysis, using as cutoff 2x enrichment (log2-fold change of 1) with an adjusted p-value 0.05 (5% FDR). 
+
+Output files
+
+* `results/Ssd1_enrichment_DeSeq2_30C.txt`
+* `results/Ssd1_enrichment_DeSeq2_42C.txt`
+* `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+* `results/Ssd1_enrichment_DeSeq2_42C_2x_padj0p05_genesonly.txt`
+* `figure_out/deseq2_Ssd1_CRAC_enrichment_suppfigure.png` - supplementary figure
+
+This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`. 
+
+This script also relies on RNA-seq transcript counts produced by `multiBamCov` running `process_RNAseq.Rmd`, found in `results/RNAseq_stressmatched_transcriptcounts.txt`. It must be run after `process_RNAseq.Rmd`.
 
 ## normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd
 
@@ -23,6 +38,8 @@ Analyse relative *enrichment* of Ssd1 on mRNA, by processing time & condition ma
 This script relies on CRAC transcript counts produced by `multiBamCov` running in the CRAC pipeline, and found in `Ssd1_CRAC_demult_dedup_20190114_all/multicov_analyses/allsample_transcriptcounts.txt`. So it must be run after  `src/CRAC_pipeline_SE_demult_dedup.py`, see the repository `README.md` for details. 
 
 This script also relies on RNA-seq transcript counts produced by `multiBamCov` running `process_RNAseq.Rmd`, found in `results/RNAseq_stressmatched_transcriptcounts.txt`. It must be run after `process_RNAseq.Rmd`.
+
+The script also relies on lists of differentially expressed genes produced by `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`.
 
 
 ## compare_target_transcripts.Rmd
@@ -35,8 +52,8 @@ Takes the list of transcripts enriched in Ssd1 binding in the CRAC dataset, and 
 
 These publicly available data need to be downloaded to the `input_targets` directory, see `input_targets/README.md` for details.
 
-This script also relies on lists of Ssd1-enriched transcripts produced by `normalise_Ssd1_CRAC_counts_vs_RNAseq.Rmd`, found in `results/Ssd1_targets_TPMratio4x_30C.txt`
-and `results/Ssd1_targets_TPMratio4x_42C.txt`.
+This script relies on lists of Ssd1-enriched transcripts produced by `deseq2_Ssd1_CRAC_vs_RNAseq.Rmd`, found in `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`
+and `results/Ssd1_enrichment_DeSeq2_30C_2x_padj0p05_genesonly.txt`.
 
 
 ## bedgraph_genome_plots.Rmd - zoomed-out read counts on transcripts
