@@ -1,4 +1,4 @@
-# strain-plasmid-info
+# strain_plasmid_info
 
 This folder contains information on yeast strain construction for Ssd1 analysis.
 
