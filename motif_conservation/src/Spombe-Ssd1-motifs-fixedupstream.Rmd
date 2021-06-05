@@ -1,0 +1,188 @@
+---
+title: "Counting Ssd1 motifs in Schizosaccharomyces pombe, approximate 5'UTRs with fixed length upstream of CDSs"
+author: "Edward Wallace"
+date: "14/02/2021"
+output: 
+  html_document:
+      toc: true
+---
+
+# Summary
+
+We are looking for occurences of the major part of the Ssd1-binding motif, `CNYTCNYT`, in *Schizosaccharomyces pombe*.
+
+Here we downloaded the 1000nt of genomic sequence upstream of translation start codons from [fungidb](https://fungidb.org/).
+
+The major finding is that this motif is comparatively rare in *S. pombe* upstream sequences, and genes with the motif are enriched in cell wall proteins and membrane proteins. This is what we expected.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(cowplot)
+theme_set(theme_cowplot(font_size = 12))
+
+library(Biostrings)
+```
+
+# Load approximate 1000nt UTRs
+
+```{r load_upstream1000}
+# define fasta filename
+Sp_up1000_file <- paste(here::here(), 
+                        "motif_conservation",
+                        "data", 
+                        "Spombe_972h-_ATG_upstream_1000nt.fasta",
+                        sep= "/")
+
+# load fasta file as DNA string set
+Sp_up1000_DSS <- readDNAStringSet(Sp_up1000_file)
+
+# remove truncated sequences, which we don't need.
+Sp_up1000_DSS <- Sp_up1000_DSS[width(Sp_up1000_DSS) == 1000]
+
+# assign just the ORF id to the name, but keep all the info. 
+Sp_namesinfo <- 
+    tibble(everything = names(Sp_up1000_DSS)) %>%
+    tidyr::separate(everything,into = c("id","strain","info","seqtype","seq","length"), sep = " \\| ") %>%
+    dplyr::select(id, info,seq)
+
+names(Sp_up1000_DSS) <- Sp_namesinfo$id
+
+# print the DNA string set to check it came out ok
+Sp_up1000_DSS
+```
+
+
+# Count occurences of Ssd1 motif CNYTCNYT
+
+We use functions from Biostrings (bioconductor) to find motif instances. 
+This was inspired by [a blogpost from kasper daniel hansen](https://kasperdanielhansen.github.io/genbioconductor/html/Biostrings_Matching.html).
+
+We use `fixed = "subject"` to allow ambiguous characters in the pattern `CNYTCNYT`, but not in the sequence being searched.
+
+We put all the relevant counts into a tibble for easier post-processing.
+
+```{r CNYTCNYT_count}
+CNYTCNYT_count_df <- tibble(id = Sp_namesinfo$id,
+                            info = Sp_namesinfo$info,
+                            count_up1000 = vcountPattern(pattern = DNAString("CNYTCNYT"),
+                                 subject = Sp_up1000_DSS,
+                                 fixed = "subject"),
+                            count_up200 = vcountPattern(pattern = DNAString("CNYTCNYT"),
+                                 subject = subseq(Sp_up1000_DSS,start = 801L, end = 1000L),
+                                 fixed = "subject"),
+                            count_up100 = vcountPattern(pattern = DNAString("CNYTCNYT"),
+                                 subject = subseq(Sp_up1000_DSS,start = 901L, end = 1000L),
+                                 fixed = "subject")
+)
+
+summary(CNYTCNYT_count_df)
+```
+
+## Which genes have highest counts?
+
+```{r high_counts, results="asis"}
+arrange(CNYTCNYT_count_df,desc(count_up100)) %>%
+    head(n = 20) %>%
+    knitr::kable()
+```
+
+
+## 1000nt upstream
+
+Results from all 1000nt upstream.
+
+```{r CNYTCNYT_ctdist_up1000,fig.width=4,fig.height=2.5}
+CNYT_up1000_reducedmean <- CNYTCNYT_count_df %>%
+    pull(count_up1000) %>%
+    mean()
+
+CNYT_up1000_reducedvar <- CNYTCNYT_count_df %>%
+    pull(count_up1000) %>%
+    var()
+
+ggplot(data = CNYTCNYT_count_df, aes(x = count_up1000)) +
+    geom_bar(width = 1, aes(y = ..prop..), stat = "count", group = 1) +
+    geom_line(data = tibble(),
+              aes(x = 0:20, y = dpois(0:20,lambda=CNYT_up1000_reducedmean)),
+              colour = "blue") + 
+    scale_x_continuous(limits = c(-0.5,16), oob = scales::squish)
+```
+
+This count is overdispersed relative to a Poisson distribution, with mean `r CNYT_up1000_reducedmean`, variance `r CNYT_up1000_reducedvar`.
+
+## 100nt upstream
+
+Results filtered to only the 100nt closest to the start codon.
+
+```{r CNYTCNYT_ctdist_up100,fig.width=4,fig.height=2.5}
+CNYT_up100_reducedmean <- CNYTCNYT_count_df %>%
+    pull(count_up100) %>%
+    mean()
+
+CNYT_up100_reducedvar <- CNYTCNYT_count_df %>%
+    pull(count_up100) %>%
+    var()
+
+ggplot(data = CNYTCNYT_count_df, aes(x = count_up100)) +
+    geom_bar(width = 1, aes(y = ..prop..), stat = "count", group = 1) +
+    geom_line(data = tibble(),
+              aes(x = 0:20, y = dpois(0:20,lambda=CNYT_up100_reducedmean)),
+              colour = "blue") + 
+    scale_x_continuous(limits = c(-0.5,16), oob = scales::squish)
+```
+
+This count is also overdispersed relative to a Poisson distribution, with mean `r CNYT_up100_reducedmean`, variance `r CNYT_up100_reducedvar`.
+
+# Write list of genes for GO search, based on counts 100nt upstream
+
+```{r gene_list_output}
+id_file_CNYTCNYT1_up100 <- paste(here::here(), 
+                                 "motif_conservation",
+                                 "results", 
+                                 "Sp_id_list_CNYTCNYT1_up100.txt", sep = "/")
+
+CNYTCNYT_count_df %>%
+    filter(count_up100 >= 1) %>%
+    pull(id) %>%
+    write_lines(file = id_file_CNYTCNYT1_up100)
+
+id_file_CNYTCNYT2_up100 <- paste(here::here(), 
+                        "motif_conservation",
+                        "results", 
+                        "Sp_id_list_CNYTCNYT2_up100.txt", 
+                        sep = "/")
+
+CNYTCNYT_count_df %>%
+    filter(count_up100 >= 2) %>%
+    pull(id) %>%
+    write_lines(file = id_file_CNYTCNYT2_up100)
+```
+
+Next, I did a GO term finder search of these genelists on the [princeton generic GO term finder](https://go.princeton.edu/GOTermFinder/), using terms from [pombase](https://www.pombase.org/).
+
+Cite PMID: 15297299
+
+> "GO::TermFinder--open source software for accessing Gene Ontology information and finding significantly enriched Gene Ontology terms associated with a list of genes." Boyle et al, Bioninformatics (2004)
+
+That search found significantly enriched GO terms including cell wall, cell periphery, and intrinsic component of membrane, (component) in genes with at least 2x CNYTCNYT motifs in the 100nt upstream, file `Sp_id_list_CNYTCNYT2_up100.txt`. Results are saved in the file `Sp_goFinderResult_component_pombase_id_list_CNYTCNYT2_up100.txt`.
+
+Some of the genes identified here containing at least 2 `CNYTCNYT` motifs are also identified as differentially expressed in the absence of Sts5 by [Nunez et al](https://elifesciences.org/articles/14216).
+There's lots of cell wall-modifying enzymes such as:
+
+* cell wall beta-glucosidase Psu1
+* cell wall and ascospore endo-1,3-beta-glucanase Eng2
+* primary septum and spore wall linear 1,3-beta-glucan synthase catalytic subunit Bgs1
+
+Another protein reported as differentially expressed in absence of Sts5 is [SPBP23A10.11c](https://www.pombase.org/gene/SPBP23A10.11c), predicted circularly permuted 1,3-beta-glucanase. The *S. cerevisiae* homolog Tos1 is bound by Ssd1. *S. pombe* SPBP23A10.11c has a long 5'UTR, 3 CNYTCNYT motifs in the 200nt upstream of ATG, and 14 such motifs in the 1000nt upstream.
+
+Another protein in our list with 5x CNYTCNYT sites, [SPAPB24D3.07c](https://www.pombase.org/gene/SPAPB24D3.07c) "S. pombe specific protein", is annotated with the phenotype "incomplete cell wall disassembly at cell fusion site" in the deletion mutant by [Dudin et al 2007](https://www.pombase.org/reference/PMID:28410370).
+
+
+## Report session info with version numbers of each package
+
+```{r session_info}
+sessionInfo()
+```
+
