@@ -3,9 +3,9 @@
 This folder contains information on yeast strain construction for Ssd1 analysis.
 
 Maps are all in two files, one in snapgene format (`.dna`) and also in plain-text genbank format (`.gb`).
-WE just give the stem of the filename in the tables.
+We just give the stem of the filename in the tables.
 
-## Plasmid maps for guide RNA plasmids for CRISPR
+## guideRNAPlasmids - Plasmid maps for guide RNA plasmids for CRISPR
 
 These are the plasmid maps for guide RNA plasmids based on pML104 from [Laughery & Wyrick](https://doi.org/10.1002/cpmb.110).
 Each filename starts with the plasmid id, e.g. pRB0001.
@@ -22,7 +22,7 @@ Each filename starts with the plasmid id, e.g. pRB0001.
 | pRB0007_Cl2_CSD-sideR549EgRNA1 | gRNA plasmid used to add the R549E point mutation to the CSD-side cluster |
 
 
-## Ssd1 locus maps detailing sequence and edits
+## Ssd1LocusMaps - Ssd1 locus maps detailing sequence and edits
 
 These are maps of the Ssd1 locus and edited locus in _S. cerevisiae_ yeast.
 They are based on the SSD1/YDR293C ORF with 1000nt of genomic sequence on each side, wild-type sequence for S288C yeast from the file `orf_genomic_1000.fasta` as downloaded from the [saccharomyces genome database](https://www.yeastgenome.org/), genome release R64-2-1.
