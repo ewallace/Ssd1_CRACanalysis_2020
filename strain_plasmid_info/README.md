@@ -31,7 +31,7 @@ The scarless tag templates (in snapgene format) show the guide RNAs as well as t
 
 | File | Description
 |-|-|
-| SSD1_HTP_URA3selPlus | Tandem tagged HTP with K. lactis SSD1 UTR and K. lactis URA3 selection cassette. |
+| SSD1_HTP_URA3selPlus | Ssd1 tandem tagged with HTP and K. lactis SSD1 3' UTR then K. lactis URA3 selection cassette. |
 | Ssd1-CtermHF_construct | Ssd1 scarless tag with HF tag at C-terminus |
 | NTermFH-Ssd1_construct | Ssd1 scarless tag with FH at N-terminus |
 | NTermFH-Ssd1_delN338_construct | Ssd1 with amino acids 1-338 deleted and tagged with FH at N-terminus |
@@ -40,3 +40,8 @@ The scarless tag templates (in snapgene format) show the guide RNAs as well as t
 | Ssd1Cl2_CSD-side_Mutations_plusR549E | Ssd1 triple point mutants on CSD-side: R549E, K622E, R623E |
 | Ssd1Cl3_CSD-top_Mutations | Ssd1 double point mutants on CSD-top: W583A, K585A |
 | Ssd1Cl4_CSD1-insert_Mutations | Ssd1 point mutants on CSD1 insert: K505E, Q506E, Q510E |
+
+As described in the paper and specified in the sequence files, these affinity tags are:
+- HTP tag (hexahistidine-TEV cleavage site-Protein A)
+- HF tag (octahistidine-FLAG)
+- FH tag (FLAG-octahistidine)
