@@ -1,0 +1,12 @@
+# SUN4_homolog_features.txt
+# Gene names and Ssd1-relevant features for homologs of SUN4 probable beta-glucosidase
+Species	Name	Uniprot	ID	intron_5	CCAACT_5	CNYTCNYT_5	CNYTCNYT_CDS	CNYTCNYT_3	Notes
+Sc	NCA3	P46955	YJL116C	FALSE	1	3	0	2	
+Sc	UTH1	P36135	YKR042W	FALSE	1	6	0	1	Overlap CATTCATTCATT in 5'UTR, counted as 2x CNYTCNYT
+Sc	SUN4	P53616	YNL066W	TRUE	2	2	2	1	Another CNYTCNYT upstream of 5'UTR, and another downstream of 3'UTR
+Sc	SIM1	P40472	YIL123W	TRUE	2	2	0	0	More CNYTCNYT motifs upstream of 5'UTR
+Ca	SUN41	Q59NP5	C6_00820W	TRUE	0	4	2	0	UTR annotation unclear; more CNYTCNYT motifs outside probable UTR
+Ca	UTH1	Q5AKU5	C1_13940W	FALSE	1	3	1	3	Another CNYTCNYT upstream of probable 5'UTR. Overlap CCTTCATTCGTT in 3'UTR, counted as 2x CNYTCNYT; another CNYTCNYT downstream of probable 3'UTR.
+Af	SUN1	Q4WGL5	Afu7g05450	TRUE	0	2	1	0	
+Nc	ghx-3	Q7SH61	NCU02668	TRUE	0	9	1	0	Overlap CTTTCACTCCCT in 5'UTR, counted as 2x CNYTCNYT; another CNYTCNYT downstream of 3'UTR beyond poly(T) tract
+Sp	PSU2	O43015	SPBC2G2.17c	FALSE	0	1	2	2	CNYTCNYT pair in CDS are very close to start codon.

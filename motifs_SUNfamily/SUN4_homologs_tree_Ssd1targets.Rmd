@@ -1,0 +1,136 @@
+---
+title: "Tree with Ssd1-relevant features for ascomycete SUN4 homologs"
+author: "Edward Wallace"
+date: "17/07/2020"
+output: 
+  html_document:
+      toc: true
+---
+
+# Summary
+
+This document is to make a figure describing SUN-family homologs and their regulation by CCAACT and CNYTCNYT motifs, indicating Ssd1 regulation.
+
+* plots a phylogenetic tree of some ascomycete homologs of SUN4/SIM1/UTH1/NCA3
+* makes a figure of motif counts next to the phlyogenetic tree
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggtree)
+library(treeio)
+library(cowplot)
+```
+
+## Load SUN-family features and names
+
+```{r load_features}
+features <- read_tsv("SUN4_homologs_features.txt", 
+                     comment = "#", col_types = "ccccliiiic") %>%
+    mutate(SpName = paste(Species,Name,sep="_"))
+
+uniprot_to_spname <- features$SpName %>% set_names(features$Uniprot)
+
+features
+```
+
+
+
+## Load fasttree results
+
+This loads the approximate maximum likelihood tree calculated by fasttree.
+
+```{r load_tree}
+tree_fasttree <- treeio::read.tree("SUN4_homologs_proteinsequences_mafft_geinsi_fasttree.nwk")
+tree_fasttree
+tree_fasttree$tip.label <- uniprot_to_spname[stringr::str_match(tree_fasttree$tip.label,"[A-Z0-9]{6}")]
+```
+
+## Plot the tree with S. cerevisiae UTH1 at the top
+
+```{r plot_treeonly}
+plot_tree_original <-
+    ggtree(tree_fasttree) + 
+    geom_tiplab(size=4, align=TRUE, linetype='dashed', 
+                linesize=.3, hjust = -0.1) +
+    geom_treescale()
+
+plot_tree_UTH1up <- 
+    plot_tree_original %>%
+    rotate(16) %>% 
+    rotate(14)
+
+plot_tree_UTH1up
+```
+
+## Order the features data the same as the tree
+
+```{r features_tree_order,dependson="find_Dis3groups_reroot"}
+treedata_UTH1up_ordered <- 
+    plot_tree_UTH1up %>% 
+    .$data %>%
+    filter(isTip) %>%
+    arrange(y)
+
+features_UTH1up_ordered <- treedata_UTH1up_ordered %>%
+    select(SpName = label,y) %>%
+    left_join(features) 
+
+```
+
+## Create features plots
+
+```{r plot_features}
+features_UTH1up_long <- 
+    features_UTH1up_ordered %>%
+    select(SpName,y, CCAACT_5,CNYTCNYT_5,CNYTCNYT_CDS,CNYTCNYT_3) %>%
+    pivot_longer(c(CCAACT_5,CNYTCNYT_5,CNYTCNYT_CDS,CNYTCNYT_3)) %>%
+    separate(name,c("motif","region"),remove = FALSE) %>%
+    mutate(region = factor(region, 
+                           levels = c("5","CDS","3"), 
+                           labels = c("5′UTR","CDS","3′UTR"))) %>%
+    mutate(present = value > 0)
+
+plot_CNYUCNYU <- 
+ggplot(data=filter(features_UTH1up_long, motif == "CNYTCNYT"), aes(x=region,y=y)) +
+    geom_raster(aes(fill=present)) +
+    geom_text(aes(label = value)) +
+    scale_fill_manual(values = c("TRUE" = "#2b9744", "FALSE" = NA)) +
+    theme_void() + 
+    labs(x = "CNYUCNYU\ncount") + 
+    theme(axis.text.x = element_text(angle=90),
+          axis.title.x = element_text(),
+          legend.position = "none")
+
+plot_CCAACU <- 
+ggplot(data=filter(features_UTH1up_long, motif == "CCAACT"), aes(x=region,y=y)) +
+    geom_raster(aes(fill=present)) +
+    geom_text(aes(label = value)) +
+    scale_fill_manual(values = c("TRUE" = "#3fa6b0", "FALSE" = NA)) +
+    theme_void() + 
+    labs(x="CCAACU\ncount") + 
+    theme(axis.text.x = element_text(angle=90),
+          axis.title.x = element_text(hjust = 1),
+          legend.position = "none")
+```
+
+## Print features plot alongside tree
+
+```{r plot_tree_and_features,fig.width = 5, fig.height =4}
+plot_tree_and_features <- 
+    plot_grid(plot_tree_UTH1up + expand_limits(x = max(treedata_UTH1up_ordered$x)*1.4), 
+              plot_CCAACU, plot_CNYUCNYU,
+              nrow=1,align="h",rel_widths = c(10,1,3))
+plot_tree_and_features
+
+ggsave("Fig6_SUN4homologs_tree_motifs.svg",
+       plot = plot_tree_and_features,
+       width = 5, height = 4)
+```
+
+
+# Report session info with version numbers of each package
+
+```{r session_info}
+sessionInfo()
+```
