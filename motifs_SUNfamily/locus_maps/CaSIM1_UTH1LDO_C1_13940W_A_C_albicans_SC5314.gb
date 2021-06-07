@@ -1,0 +1,106 @@
+LOCUS       Exported                3119 bp DNA     linear   UNA 06-OCT-2020
+DEFINITION  natural linear DNA
+ACCESSION   .
+VERSION     .
+KEYWORDS    .
+SOURCE      natural DNA sequence
+  ORGANISM  unspecified
+REFERENCE   1  (bases 1 to 3119)
+  AUTHORS   Edward Wallace
+  TITLE     Direct Submission
+  JOURNAL   Exported Monday, Jun 7, 2021 from SnapGene 5.3.0
+            https://www.snapgene.com
+FEATURES             Location/Qualifiers
+     source          1..3119
+                     /organism="unspecified"
+                     /mol_type="genomic DNA"
+     misc_feature    803..810
+                     /label=SEE
+                     /note="Ssd1 enriched element"
+     5'UTR           838..1000
+                     /note="Bruno 2010 annotation"
+     misc_feature    853..858
+                     /label=SEUE
+     misc_feature    864..871
+                     /label=SEE
+                     /note="Ssd1 enriched element"
+     misc_feature    923..930
+                     /label=SEE
+                     /note="SSd1 enriched element"
+     misc_feature    993..1000
+                     /label=SEE
+                     /note="Ssd1 enriched element"
+     CDS             1001..2119
+                     /codon_start=1
+                     /product="Called ""SIM1"", but actually syntenic to ScUTH1"
+                     /label=CaUTH1
+                     /translation="MKYLTLLTVLSTALATPLQHQHHHHHEHARRAEVTKVVYVNGNGD
+                     EVQSQVTENASSGASSGETAETIQTRSSSDVSSSSDSNPVASIASSVASSASSILSNIE
+                     GDLSAFSSPSKKFEDGVYDCDSVPVGQGVIGVDWISGLNGGWTTIMNENGDTSLNCKDG
+                     YYCSYACQAGMSKTQWPSEQPSNGMSIGGLYCKNGKLYRSNTDNDYLCEWGSKDVNFVS
+                     EISEDVAICRTDYPGSENMNIPTLLSAGGKAPCSVVDGDTYFKWQGGKTSTQYYVNNAG
+                     VSVEDGCIWGTEGSGVGNWAPVVLGSGTTGGKTYLSLIPNPNNKDKPNYNIKIVGDDVN
+                     GDCKYENGQYNGSGSDGCTVTVNSGSAKFVFY"
+     misc_feature    1326..1333
+                     /label=SEE
+     3'UTR           2121..2505
+                     /note="Bruno 2010 annotation
+                     "
+     misc_feature    2276..2287
+                     /label=SEE
+     misc_feature    2325..2332
+                     /label=SEE
+ORIGIN
+        1 tgaaaaaagc aattgagaac aaagtattat cctctattgt caatcttgtg atgcacaaat
+       61 tcaattcaca ttcctttatt cacaataccc acttatgcat ctaagaataa caaaatttca
+      121 gtaatttatt ttcattttga ttgttttagg aatcttaatg aagtctagat ctactctgct
+      181 tcccaattaa gtaatattcc acggcacatc acctaccaat tgggcggtat cttacacaaa
+      241 ctaagggtaa tttttaatgc acagctaact aaacaattag ctaaacaatt gtaaaattgc
+      301 agcaactgta cacgacttta cacaaaaaat tattcattgc tgataataat ttttttttct
+      361 cctgtgtcta tagaaaattg attttgttgc agctccccgg tttacactgt gcaatttcac
+      421 actaataaat gaggttaatt tattaagtta cctaacataa tggttataat atgtattatc
+      481 taggctttaa ccaaattagc ttattagttt ttgggatttg taatttgttt gttggcctcc
+      541 tttttttttg acacaaacta acaaaaatca atggcaaatc ctaatgaaaa aaattttatt
+      601 atattgattt gtgtttgttt ctgcaatttt tttatttgca ttttgcatct ttcgcataaa
+      661 tgaaaatttc ttttttgtat tctgtgaatt gattttcaat tttttgcttt attattgcac
+      721 gatcctaatg tccaccaatt gtataaataa aatctaatct gtctagagta ttgtctttta
+      781 tattttgatt ttacctcttc ttctttcttt tatattaatt ttcattaatt aaattcaacc
+      841 tacaaccttt aaccaacttt tgtctttcat ttagcaacta gtttctatat tttaactgtc
+      901 aagttattct atcatatttt cacattcctt tgatttccaa atcatccaaa tattatttta
+      961 tagcaacaat taaaagaaaa ataactgata tcctttcatt atgaaatatt taactttatt
+     1021 aacagtctta tcaactgctt tggccactcc attgcaacat caacaccacc accatcatga
+     1081 acatgccaga agagctgaag taaccaaagt tgtttacgtc aacggcaacg gtgacgaagt
+     1141 tcaaagtcaa gtcactgaaa acgcttcttc tggtgcttct tctggtgaaa ctgccgaaac
+     1201 cattcaaact cgttcttcaa gtgatgtcag cagtagtagt gacagcaacc cagttgcttc
+     1261 aattgccagc tcagttgctt caagtgcttc ttcaatcctc agtaatattg aaggtgattt
+     1321 aagtgccttc tctagcccaa gcaaaaaatt cgaagatggt gtttacgatt gtgattccgt
+     1381 tccagttggc caaggtgtta ttggtgttga ctggatttct ggattaaatg gtggttggac
+     1441 cactattatg aacgaaaacg gtgacacctc tttaaactgt aaagatggtt actactgttc
+     1501 ttatgcttgt caagctggta tgtccaagac tcaatggcca tctgaacaac caagtaacgg
+     1561 tatgtctatt ggtggattat actgtaagaa cggtaaattg tacagatcta acactgacaa
+     1621 tgattacttg tgtgaatggg gttccaaaga tgtcaacttt gtttctgaaa tcagcgaaga
+     1681 cgttgctatc tgtagaaccg attacccagg ttccgaaaac atgaacattc caactttgtt
+     1741 atctgctggt ggtaaagccc catgttctgt tgttgatggt gacacctact tcaaatggca
+     1801 aggtggtaaa acttctaccc aatactacgt caacaatgct ggtgtttcag tcgaagatgg
+     1861 ttgtatctgg ggtactgaag gttctggtgt tggtaactgg gctccagttg ttttgggatc
+     1921 tggtactact ggtggtaaaa cttacttgtc attgattcca aacccaaaca acaaggacaa
+     1981 accaaactac aacatcaaga ttgtcggtga tgatgtcaac ggtgactgta aatacgaaaa
+     2041 cggtcaatac aacggtagtg gttctgatgg ttgtaccgtc accgtcaatt ccggttctgc
+     2101 taaatttgtt ttctactaga gaatcacagt tatctgatat ccaagttgga caactattac
+     2161 aatcttggta attattgaca tgattaataa tgctactata cagaaattaa tatattaatt
+     2221 ttttgggttt attgattgtt gtaccaatag tcttgttttt cttttttttc ttatgccttc
+     2281 attcgtttcg gtcaattatt actgaaccat gtttctttcg gtgactttca tttagagagt
+     2341 tgtttcattt tgtttcatta tttgttctat tatatatttg gtctagggat tttttcatat
+     2401 attgtattat gtagtattta gagataccca ttccacaaag ttttcccttt ttttaatttt
+     2461 acgttgttct attataaaga taatgtacat tagaattgtt atcggtatcg ttgttaagga
+     2521 aacgtcacga cacaaacctg taaaattatt ttcgtctatt tcatcgtctt ccattctttt
+     2581 tgagttttga ttatttacca aatctcttca accaaatgca atcgtattac aataactaat
+     2641 aatcaactca ttattagttt tgaacaatcc atataacgag cctatctgct cgtcaggcaa
+     2701 tggcataaaa ctattttgaa tatacaaatt taatacacct ttgaacttta attttttaca
+     2761 caaaaacctg tttagtgtag aaaccgtttg tgttgctgag atcttaaaca ctcgtggttg
+     2821 aatcgacggt gttgaaccga taggaacgaa tcgaatcata attttattat cgagggaatt
+     2881 gtttgataca tgaccgccag cagtggatcc ttctgttaga tttgataatt tctgatgttg
+     2941 ttctaatggt aatttttttt ctagtataat tgacgttgat aatggtattt tggttgggat
+     3001 tgggtcttgt tgtaaggatt tggatggtga tgataacgac gatgatgatt gactacctac
+     3061 atcatcgtca tcgtcatctt cagagtgaat tattcttgac atggtgcttt agtatgtag
+//

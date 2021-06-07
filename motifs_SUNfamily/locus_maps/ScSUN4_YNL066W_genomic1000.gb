@@ -1,0 +1,141 @@
+LOCUS       Exported                3263 bp DNA     linear   UNA 14-JUL-2020
+DEFINITION  natural linear DNA
+ACCESSION   .
+VERSION     .
+KEYWORDS    .
+SOURCE      natural DNA sequence
+  ORGANISM  unspecified
+REFERENCE   1  (bases 1 to 3263)
+  AUTHORS   Edward Wallace
+  TITLE     Direct Submission
+  JOURNAL   Exported Monday, Jun 7, 2021 from SnapGene 5.3.0
+            https://www.snapgene.com
+FEATURES             Location/Qualifiers
+     source          1..3263
+                     /organism="unspecified"
+                     /mol_type="genomic DNA"
+     misc_feature    369..376
+                     /label=SEE-like, but not in 5'UTR
+     5'UTR           join(418..642,989..1000)
+                     /note="5'UTR annotation from yeastmine (Yassour 2009 / 
+                     Nakalakshmi 2008)
+                     Pelechano 2013 says 195bp total (but 5'UTR introns 
+                     unclear)"
+     misc_feature    530..609
+                     /label=delete to remove all SEEs in 5'UTR
+     misc_feature    530..537
+                     /label=SEE
+     misc_feature    538..609
+                     /label=delete this for ""double concertina"" construct
+     primer_bind     complement(543..562)
+                     /label=gRNA for one SEE
+     misc_feature    547..552
+                     /label=SEUE
+     primer_bind     complement(550..569)
+                     /label=gRNA for one SEE, 2
+     misc_feature    559..566
+                     /label=SEE
+     primer_bind     complement(566..585)
+                     /label=gRNA between 1
+                     /note="needs better name!"
+     misc_feature    567..609
+                     /label=delete this for ""concertina"" construct
+     primer_bind     complement(575..594)
+                     /label=gRNA between 2
+                     /note="needs better name!"
+     misc_feature    590..595
+                     /label=SEUE
+     misc_feature    602..609
+                     /label=SEE
+     intron          643..988
+                     /label=YNL066W_intron
+     primer_bind     complement(669..688)
+                     /label=gRNA intron 1
+     primer_bind     718..737
+                     /label=gRNA intron 2
+     CDS             1001..2263
+                     /codon_start=1
+                     /label=SUN4
+                     /translation="MKLSATTLTAASLIGYSTIVSALPYAADIDTGCTTTAHGSHQHKR
+                     AVAVTYVYETVTVDKNGQTVTPTSTEASSTVASTTTLISESSVTKSSSKVASSSESTEQ
+                     IATTSSSAQTTLTSSETSTSESSVPISTSGSASTSSAASSATGSIYGDLADFSGPYEKF
+                     EDGTIPCGQFPSGQGVIPISWLDEGGWSGVENTDTSTGGSCKEGSYCSYACQPGMSKTQ
+                     WPSDQPSDGRSIGGLLCKDGYLYRSNTDTDYLCEWGVDAAYVVSELSNDVAICRTDYPG
+                     TENMVIPTYVQAGDSLPLTVVDQDTYYTWQGLKTSAQYYVNNAGISVEDACVWGSSSSG
+                     VGNWAPLNFGAGSSDGVAYLSLIPNPNNGNALNFNVKIVAADDSSTVNGECIYENGSFS
+                     GGSDGCTVSVTAGKAKFVLYN"
+     misc_feature    1501..1508
+                     /label=SEE
+     primer_bind     complement(2076..2095)
+                     /label=gRNA overlapping internal SEE 1
+     misc_feature    2078..2085
+                     /label=SEE
+     primer_bind     complement(2080..2099)
+                     /label=gRNA overlapping internal SEE 2
+     primer_bind     2248..2267
+                     /label=gRNA overlapping stop codon 1
+     3'UTR           2264..2461
+                     /note="Nagalakshi 2008, via yeastmine"
+     misc_feature    2309..2316
+                     /label=SEE
+     primer_bind     complement(2311..2330)
+                     /label=gRNA overlapping 3'UTR SEE
+     misc_feature    2476..2483
+                     /label=SEE
+ORIGIN
+        1 aaaggaaaga aacactaaaa aataaatatt ctctaatacg ttacaaatga ttttcttttt
+       61 tcttgagtct tgcaatcata cccgtagctt tctcttgttc ttcggctatt gctttaaatc
+      121 aaaatgatat ctgggtgtac cagcaagttt cgaaatgaaa acataaaaat atggttaccc
+      181 gacatatatg ctggtttaat actggttaaa ctgaacagaa gcatctcttt tctctattag
+      241 gacgtaaacg acaacgtttt tttttatagg aaaagtaaac aaagcgcagt ggaaggcagc
+      301 gaaaggaacc tgcacagcgc gaagtttata aacaatgact tttccagatc tcggattttt
+      361 ttctcgcacg ttcccttcag catgaatctt atttaaacac ttactttcga gaaaaataac
+      421 agtagtttcc ccaaaaaaaa tagtactatc acacgtattt taaatataat cgccgtatta
+      481 ttcactatat tcaatttcaa ctttatagca agaaaaggaa agatcgattc gttcttttac
+      541 cattatccaa ctactctaca ctcctttttc gccgaagaaa agaactcttc caactaattt
+      601 tcactccttt aagcattttt tttttttact tttttacaag tcgtatgttt aatttaatga
+      661 taagaccttt catgttacta tattttgagt ttgcaaatta ttccactgat tacgaaattg
+      721 ctgtgctttt ttcgcttcgg tgcatcgtca tttttcgaga ataaagcaaa tttttacatg
+      781 cccgttattt ttccgtgcac aacttctttt tggctttttt ggccgtcgga tttacggcgc
+      841 gaaaataagt ttctgacttc tcgagatata gccattgtag aaactaaaac aatattgatt
+      901 gattcaatta gcactaatct tagaaaattt gcaatcctac tcttttcgca atgattttat
+      961 ttactaaccc atcccaaatt tattttagta atttgataaa atgaaactgt ccgccaccac
+     1021 tcttaccgcg gcttcattga tcggttatag cacaatcgtt tccgctttgc cgtatgcggc
+     1081 tgatattgac acaggatgta ctactactgc tcatggttca caccagcata agagggccgt
+     1141 tgcagttaca tacgtttacg aaacagtcac tgtcgataaa aatggtcaga ccgtcactcc
+     1201 aacctcaact gaagcctctt ctacagttgc ttccactact actctgattt ccgaatcttc
+     1261 ggtcaccaag tcttcttcca aagttgcttc ttcttctgag agtactgaac aaatcgctac
+     1321 cacctcgtct tcggctcaaa caactctgac atcttcagaa acttctacta gcgaatcctc
+     1381 tgtgcctatt tccacatctg ggtcagcttc cacatcttca gcagcttcca gtgcaactgg
+     1441 aagtatctac ggtgatttgg ctgacttttc aggtccatat gaaaaatttg aagacggtac
+     1501 cattccttgc ggccaatttc catctggtca aggtgttatc cccatcagct ggttagatga
+     1561 aggtggctgg tctggtgttg aaaatactga cacttctacg ggtggctctt gtaaagaagg
+     1621 gtcttactgc tcatacgctt gccaaccagg tatgtccaag acacaatggc cttctgacca
+     1681 accatctgac ggcagatcca ttggtggttt gctatgtaag gacggctacc tgtaccgttc
+     1741 aaatacagat actgactatt tatgcgaatg gggcgttgat gccgcttacg tcgtctctga
+     1801 attgagcaac gatgttgcta tctgcaggac cgattacccg ggtaccgaaa acatggtgat
+     1861 tcctacatat gtgcaagcag gtgactcttt acccttgact gtcgttgatc aggacaccta
+     1921 ctacacttgg caaggattga agacatccgc gcaatactac gttaacaatg ccggtatttc
+     1981 tgtcgaagat gcttgtgttt ggggttcttc aagttcaggc gtcggtaatt gggctccatt
+     2041 gaactttggc gctggttctt ctgatggtgt cgcctacctt tctttgattc ccaacccaaa
+     2101 caacggtaac gcattgaatt tcaatgtcaa aattgtcgcc gctgatgact cttctacagt
+     2161 caacggtgaa tgtatctatg aaaacggtag cttcagcggt ggctctgacg gttgtaccgt
+     2221 ttccgttact gctggcaaag ctaagtttgt tctatacaac taaacttagg cgcatcaaca
+     2281 gttgagtaag ttgattgtat tattacccca ttcttttctg cccgtccatt ttattgtctg
+     2341 tttaacatac actaaaaccc acgccggatt aatatcaatt tttttttact ttgtttctat
+     2401 ttatcattct tccagacata aattattttg taatattaaa gacatttgaa aacctacata
+     2461 catcgcacac ctcttctttc attgtcctaa aaaccaccca aaaaaaaaaa aaagacatca
+     2521 aatctctttt tttttttttt gtagttctgt tgccgtatgc tatctactcc taaggctttt
+     2581 ttctactacg gcaatctatt cacaatgtgc aattaggcta aatgctaaaa aaagaaaaaa
+     2641 aaatccggag cccctcgatg actcctgttt ccgttttata ctgtccagcg cagaccgcac
+     2701 ttcctacgta tacttcttac ggggaaggga gcatacacga aaacaaaagg acccgtaatg
+     2761 actcggaaac tccatagatc ggtaaatacc ggctcgttac ccgtcctcca tcggaaaatc
+     2821 tctcaccgat ttgttccggt atcggataat ttatgaatca cccggcttga tggaaccgtt
+     2881 tttgttccgt gaaatgcccg gcctgcattg ttttcttcag acgagaagcc gttccaacgt
+     2941 ttctttttct cgtcaccggg aagttgcggg caccttaggg caaggaaaaa gaaacttctc
+     3001 tgccctcatc gaggatacag ttgatcatac tcaatattat ataacgctta acactgtcaa
+     3061 ggttatacac tttttactaa ctttttattg ctaatattgt cgttctatat aaaattatgg
+     3121 atttttccag gcttacaaag ttagcattta tacggagata aatttatttt tttgagaatc
+     3181 caagctagat tcagaaagtc gaatcagcaa tgtcacgaag taacagtata tacacagaag
+     3241 atattgagat gtatcctact cac
+//
