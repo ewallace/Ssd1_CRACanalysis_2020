@@ -32,7 +32,7 @@ The scarless tag templates (in snapgene format) show the guide RNAs as well as t
 | File | Description
 |-|-|
 | SSD1_HTP_URA3selPlus | Tandem tagged HTP with K. lactis SSD1 UTR and K. lactis URA3 selection cassette. |
-| Ssd1-CtermHFconstruct | Ssd1 scarless tag with HF tag at C-terminus |
+| Ssd1-CtermHF_construct | Ssd1 scarless tag with HF tag at C-terminus |
 | NTermFH-Ssd1_construct | Ssd1 scarless tag with FH at N-terminus |
 | NTermFH-Ssd1_delN338_construct | Ssd1 with amino acids 1-338 deleted and tagged with FH at N-terminus |
 | Ssd1Cl1_RNB_Mutations | Ssd1 triple point mutants on RNB domain: R745E, R746E, R748E |
