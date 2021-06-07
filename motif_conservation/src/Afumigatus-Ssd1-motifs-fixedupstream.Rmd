@@ -1,0 +1,176 @@
+---
+title: "Counting Ssd1 motifs in Aspergillus fumigatus, approximate 5'UTRs with fixed length upstream of CDSs"
+author: "Edward Wallace"
+date: "07/02/2021"
+output: 
+  html_document:
+      toc: true
+---
+
+# Summary
+
+We are looking for occurences of the major part of the Ssd1-binding motif, `CNYTCNYT`, in *Aspergillus fumigatus*.
+
+Here we downloaded the 1000nt of genomic sequence upstream of translation start codons from [fungidb](https://fungidb.org/).
+
+The major finding is that this motif is comparatively rare in *A. fumigatus* upstream sequences, and genes with the motif are enriched in cell wall proteins. This is what we expected.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(cowplot)
+theme_set(theme_cowplot(font_size = 12))
+
+library(Biostrings)
+```
+
+
+# Load approximate 1000nt UTRs
+
+```{r load_upstream1000}
+# define fasta filename
+Af_up1000_file <- paste(here::here(), 
+                        "motif_conservation",
+                        "data", 
+                        "Afumigatus_Af293_ATG_upstream_1000nt.fasta",
+                        sep= "/")
+
+# load fasta file as DNA string set
+Af_up1000_DSS <- readDNAStringSet(Af_up1000_file)
+
+# remove truncated sequences, which we don't need.
+Af_up1000_DSS <- Af_up1000_DSS[width(Af_up1000_DSS) == 1000]
+
+# assign just the ORF id to the name, but keep all the info. 
+Af_namesinfo <- 
+    tibble(everything = names(Af_up1000_DSS)) %>%
+    tidyr::separate(everything,into = c("id","strain","info","seqtype","seq","length"), sep = " \\| ") %>%
+    dplyr::select(id, info,seq)
+
+names(Af_up1000_DSS) <- Af_namesinfo$id
+
+# print the DNA string set to check it came out ok
+Af_up1000_DSS
+```
+
+
+# Count occurences of Ssd1 motif CNYTCNYT
+
+We use functions from Biostrings (bioconductor) to find motif instances. 
+This was inspired by [a blogpost from kasper daniel hansen](https://kasperdanielhansen.github.io/genbioconductor/html/Biostrings_Matching.html).
+
+We use `fixed = "subject"` to allow ambiguous characters in the pattern `CNYTCNYT`, but not in the sequence being searched.
+
+We put all the relevant counts into a tibble for easier post-processing.
+
+```{r CNYTCNYT_count}
+CNYTCNYT_count_df <- tibble(id = Af_namesinfo$id,
+                            info = Af_namesinfo$info,
+                            count_up1000 = vcountPattern(pattern = DNAString("CNYTCNYT"),
+                                 subject = Af_up1000_DSS,
+                                 fixed = "subject"),
+                            count_up200 = vcountPattern(pattern = DNAString("CNYTCNYT"),
+                                 subject = subseq(Af_up1000_DSS,start = 801L, end = 1000L),
+                                 fixed = "subject"),
+                            count_up100 = vcountPattern(pattern = DNAString("CNYTCNYT"),
+                                 subject = subseq(Af_up1000_DSS,start = 901L, end = 1000L),
+                                 fixed = "subject")
+)
+
+summary(CNYTCNYT_count_df)
+```
+
+## Which genes have highest counts?
+
+```{r high_counts, results="asis"}
+arrange(CNYTCNYT_count_df,desc(count_up100)) %>%
+    head(n = 20) %>%
+    knitr::kable()
+```
+
+
+## 1000nt upstream
+
+Results from all 1000nt upstream.
+
+```{r CNYTCNYT_ctdist_up1000,fig.width=4,fig.height=2.5}
+CNYT_up1000_reducedmean <- CNYTCNYT_count_df %>%
+    pull(count_up1000) %>%
+    mean()
+
+CNYT_up1000_reducedvar <- CNYTCNYT_count_df %>%
+    pull(count_up1000) %>%
+    var()
+
+ggplot(data = CNYTCNYT_count_df, aes(x = count_up1000)) +
+    geom_bar(width = 1, aes(y = ..prop..), stat = "count", group = 1) +
+    geom_line(data = tibble(),
+              aes(x = 0:20, y = dpois(0:20,lambda=CNYT_up1000_reducedmean)),
+              colour = "blue") + 
+    scale_x_continuous(limits = c(-0.5,16), oob = scales::squish)
+```
+
+This count is overdispersed relative to a Poisson distribution, with mean `r CNYT_up1000_reducedmean`, variance `r CNYT_up1000_reducedvar`.
+
+## 100nt upstream
+
+Results filtered to only the 100nt closest to the start codon.
+
+```{r CNYTCNYT_ctdist_up100,fig.width=4,fig.height=2.5}
+CNYT_up100_reducedmean <- CNYTCNYT_count_df %>%
+    pull(count_up100) %>%
+    mean()
+
+CNYT_up100_reducedvar <- CNYTCNYT_count_df %>%
+    pull(count_up100) %>%
+    var()
+
+ggplot(data = CNYTCNYT_count_df, aes(x = count_up100)) +
+    geom_bar(width = 1, aes(y = ..prop..), stat = "count", group = 1) +
+    geom_line(data = tibble(),
+              aes(x = 0:20, y = dpois(0:20,lambda=CNYT_up100_reducedmean)),
+              colour = "blue") + 
+    scale_x_continuous(limits = c(-0.5,16), oob = scales::squish)
+```
+
+This count is slightly overdispersed relative to a Poisson distribution, with mean `r CNYT_up100_reducedmean`, variance `r CNYT_up100_reducedvar`.
+
+# Write list of genes for GO search, based on counts 100nt upstream
+
+```{r gene_list_output}
+
+id_file_CNYTCNYT1_up100 <- paste(here::here(),
+                                 "motif_conservation",
+                                 "results",
+                                 "Af_id_list_CNYTCNYT1_up100.txt",
+                                 sep = "/")
+
+CNYTCNYT_count_df %>%
+    filter(count_up100 >= 1) %>%
+    pull(id) %>%
+    write_lines(file = id_file_CNYTCNYT1_up100)
+
+id_file_CNYTCNYT2_up100 <- paste(here::here(),
+                                 "motif_conservation",
+                                 "results",
+                                 "Af_id_list_CNYTCNYT2_up100.txt",
+                                 sep = "/")
+
+CNYTCNYT_count_df %>%
+    filter(count_up100 >= 2) %>%
+    pull(id) %>%
+    write_lines(file = id_file_CNYTCNYT2_up100)
+```
+
+Next, I did a GO term search of these genelists on [AspGD](http://http://www.aspergillusgenome.org//).
+Using their [GO Term Finder](http://www.aspergillusgenome.org/cgi-bin/GO/goTermFinder)
+
+That found significantly enriched GO terms including cell wall (component) in genes with at least 2x CNYTCNYT motifs in the 100nt upstream, file `Af_id_list_CNYTCNYT2_up100.txt`. Results are saved in the file `Af_goFinderResult_11373_component_AspGD_id_list_CNYTCNYT2_up100.txt`.
+
+
+# Report session info with version numbers of each package
+
+```{r session_info}
+sessionInfo()
+```
