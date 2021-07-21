@@ -9,7 +9,7 @@ This repository contains extended data for the manuscript:
 > Nucleic Acids Research, 2021 [doi: 10.1093/nar/gkab615](https://doi.org/10.1093/nar/gkab615)
 
 This repository concentrates on analysis of CRAC data measuring the RNA-binding of yeast [Ssd1/YDR293C](https://www.yeastgenome.org/locus/S000002701), 2020.
-The raw CRAC sequencing data is archived on Gene Expression Omnibus, accession [GSE159835](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE159835).
+The nearly-raw demultiplexed CRAC sequencing data is archived on Gene Expression Omnibus, accession [GSE159835](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE159835).
 
 This repository also contains some related analysis and supporting information that is not directly analysing the CRAC data, see the table of contents below.
 
@@ -31,18 +31,18 @@ The script makes extensive use of his [pyCRAC software](https://git.ecdf.ed.ac.u
 > Webb S, Hector RD, Kudla G, Granneman S. PAR-CLIP data indicate that Nrd1-Nab3-dependent transcription termination regulates expression of hundreds of protein coding genes in yeast. Genome Biol. 2014 Jan 7;15(1):R8. doi: 10.1186/gb-2014-15-1-r8. [PMID: 24393166](https://pubmed.ncbi.nlm.nih.gov/24393166/); PMCID: PMC4053934.
 
 This repository is "as self-contained as possible". Most files are kept locally, with the exception of the 
-* .fastq data (very large) - stored on GEO
-* .novoindex aligner index (large) - created from the genome sequence in `input_annotation`
+* .fastq data (very large, some is available on GEO)
+* .novoindex aligner index (large, created from the genome sequence in `input_annotation`
 
 The pipeline reads as inputs:
 
-* one multiplexed .fastq file with all raw reads 
+* one multiplexed .fastq file with all raw reads (available on request because GEO will not accept multiplexed files).
 * annotation files, in `input_annotation`
 * barcode files, in `input_barcodes`
 
 The pipeline writes as outputs:
 
-* demultiplexed reads in .fastq format (also stored on GEO)
+* demultiplexed reads in .fastq format (stored on GEO)
 * various intermediate files of trimmed or unsorted reads (very large, not stored)
 * reads aligned to the genome and sorted, in .bam format (very large, not stored in repository)
 * read counts for each annotated transcript, in a .gff-like format
