@@ -1,0 +1,367 @@
+---
+title: "TCP-seq quick analysis"
+author: "Edward Wallace"
+date: "07/01/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggrepel)
+library(cowplot)
+library(valr) # for read_bedgraph
+
+theme_set(theme_cowplot(font_size = 11) + 
+              theme(strip.background = element_blank()))
+```
+
+# Summary
+
+Analysis of TCP-seq data from Archer et al 2016 (PMID: 27437580), to compare ribosomal small subunit (40S) occupancy with Ssd1 on target genes SUN4 and UTH1.
+
+## Load data
+
+Loads the supplementary data `FP_metagene` from Archer 2016:
+
+> Archer, Stuart (2016): Coordinates of TCP-seq reads, mapped to yeast mRNAs.. figshare. Dataset. https://doi.org/10.6084/m9.figshare.3206698.v2 
+
+We immediately filter for only a single sample, `WT cells: SSU`.
+
+**Note: you will need to change the file location to run locally on a different computer. The file is 24MB compressed.
+In would be better to use the library `rfigshare`**.
+
+```{r load_data}
+FP_WTSSU <- read_tsv("~/Downloads/FP_metagene.txt") %>%
+  filter(sample == "WT cells: SSU") %>%
+  rename(Gene = gene)
+```
+
+## Plot pileup of reads on a single gene, PAB1 / YER165W
+
+```{r pileup_functionfig.width = 4, fig.height = 1}
+count_fp_pos <- function(pos, data) {
+  sum( ( data$start <= pos ) & ( data$min_end >= pos ) )
+}
+
+calculate_pileup_pos <- function(df, pos = -1000:5000) {
+  tibble(pos = pos,
+         pileup = sapply(pos,count_fp_pos, data = df))
+}
+
+pileup_PAB1 <- 
+  FP_WTSSU %>%
+  filter(Gene == "YER165W") %>%
+  calculate_pileup_pos
+
+ggplot(data = pileup_PAB1, aes(x=pos, y=pileup)) +
+  geom_line() + 
+  xlim(-200,100) +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  labs(title = "PAB1 / YER165W", x = "40S pileup")
+```
+
+## Calculate ratio of counts on 5'UTR to 5'UTR + start codon, and plot
+
+```{r calculate_countratio, fig.width = 3.5, fig.height = 2}
+countratio_bygene_over20 <- 
+  FP_WTSSU %>%
+  group_by(Gene) %>%
+  summarise(count_AUG = sum(start >= -16 & start <= -10),
+            count_5UTR = sum(start < -16),
+            count_total = n()) %>%
+  mutate(ratio_five_fiveAUG = count_5UTR / (count_5UTR + count_AUG)) %>%
+  filter(count_5UTR + count_AUG >= 20) %>%
+  arrange(ratio_five_fiveAUG) %>%
+  ungroup() %>%
+  mutate(rank = 1:nrow(.))
+
+favourite_gene_df <- 
+  tribble(~gname, ~Gene,
+          "PAB1", "YER165W", 
+          "SUN4", "YNL066W", 
+          "ACT1", "YFL039C", 
+          "UTH1", "YKR042W", 
+          "PGK1", "YCR012W")
+
+ggplot(data = countratio_bygene_over20, aes(x = rank, y = ratio_five_fiveAUG)) + 
+  geom_line(colour = "grey30", size = 1) +
+  geom_text_repel(data = left_join(favourite_gene_df,
+                                   countratio_bygene_over20),
+                  aes(label = gname),
+                  nudge_x = -200, nudge_y = 0.1, min.segment.length = 0) +
+  labs(x = "mRNA rank", y = "ratio of 40S counts\n5'UTR / (5'UTR + AUG)") +
+  coord_cartesian(expand = FALSE, clip = "off") +
+  scale_y_continuous(breaks = c(0,0.5, 1)) +
+  theme(panel.grid.major.y = element_line(colour= "grey80"))
+```
+
+## Calculate ratio of highest peak on 5'UTR to 5'UTR + start codon, and plot
+
+```{r calculate_peakratio, fig.width = 3.5, fig.height = 2}
+pileups_WTSSU_over20 <- 
+  FP_WTSSU %>%
+  filter(Gene %in% countratio_bygene_over20$Gene) %>%
+  group_by(Gene) %>%
+  do(calculate_pileup_pos(.))
+
+peakratio_bygene_over20 <- 
+  pileups_WTSSU_over20 %>%
+  summarise(maxpeak_AUG = max( (pos >= -16 & pos <= -10) * pileup ),
+            maxpeak_5UTR = max( (pos < -16) * pileup )) %>%
+  mutate(ratio_five_fiveAUG = maxpeak_5UTR / (maxpeak_5UTR + maxpeak_AUG)) %>%
+  arrange(ratio_five_fiveAUG) %>%
+  ungroup() %>%
+  mutate(rank = 1:nrow(.))
+
+favourite_gene_df <- 
+  tribble(~gname, ~Gene,
+          "PAB1", "YER165W", 
+          "SUN4", "YNL066W", 
+          "ACT1", "YFL039C", 
+          "UTH1", "YKR042W", 
+          "PGK1", "YCR012W")
+
+ggplot(data = peakratio_bygene_over20, aes(x = rank, y = ratio_five_fiveAUG)) + 
+  geom_line(colour = "grey30", size = 1) +
+  geom_text_repel(data = left_join(favourite_gene_df,
+                                   peakratio_bygene_over20),
+                  aes(label = gname),
+                  nudge_x = -200, nudge_y = 0.1, min.segment.length = 0) +
+  labs(x = "mRNA rank", y = "peak 40S coverage\n5'UTR / (5'UTR + AUG)") +
+  coord_cartesian(expand = FALSE, clip = "off") +
+  scale_y_continuous(breaks = c(0,0.5, 1)) +
+  theme(panel.grid.major.y = element_line(colour= "grey80"))
+  
+ggsave("figure/TCPseq_peak_ratio_draft.pdf", height = 2, width = 3.5)
+```
+Ssd1-regulated genes have high SSU occupancy in the 5'UTR relative to the start codon. The data show the ratio of the highest TCP-seq peak in the 5'UTR, relative to the highest peak in 5'UTR and AUG combined, for genes with at least 20 total TCP-seq reads in the WT SSU sample. PAB1 is regulated by RBPs binding in its 5'UTR, so is a positive control. PGK1 and ACT1 are not prominently regulated by this mechanism. Figure is adapted from the data of Fig 3c of Archer et al 2016 (PMID: 27437580).
+
+
+## Define plot functions for bedgraph and pileup in genomic coordinates
+
+This is adapted badly from the code in `bedgraph_genome_plots.Rmd`.
+
+These functions plot in genomic coordinates. 
+By contrast, the `FP_metagene` data from Archer et al is described in relative to th start codon on the positive strand.
+
+```{r plot_functions}
+
+onebreak <- function(lims,digits=1) {
+    # select axis breaks/ticks with 0 and one tick
+    c(0, signif(max(lims*.8), digits=digits) ) 
+}
+
+plot_bg <- function(bgbig,chromr,startr,endr,strandrev=FALSE,title=NULL,colourmain="blue") {
+    # plot bedgraph in genomic co-ordinates, normalized to max value
+    bgsmall <- bgbig %>%
+                   filter(chrom==chromr, start >= startr, end <= endr)
+    value_max <- max(bgsmall$value)
+    bgplot <- 
+        ggplot(data=bgsmall) +
+        geom_rect(
+               aes(ymin=0,ymax=value/value_max,xmin=start,xmax=end),
+               colour=colourmain,fill=colourmain) +
+        facet_grid(Type+Sample ~.,scales="free_y") +
+        scale_y_continuous(expand=c(0,0),breaks=c(0,0.5,1)) +
+        expand_limits(x=c(startr,endr)) + 
+        labs(title=title, x=chromr, y="Reads")
+    if (strandrev) {
+        return( bgplot + scale_x_reverse(expand=c(0,0),limits=c(endr,startr)) )
+    } else {
+        return( bgplot + scale_x_continuous(expand=c(0,0),limits=c(startr,endr)) )
+    }
+}
+
+read_gff <- function(file){
+    # tidyverse read gff function from rmonad vignette
+    # https://cran.r-project.org/web/packages/rmonad/vignettes/gff-processing.html
+    readr::read_tsv(
+        file,
+        col_names = c(
+            "chrom",
+            "source",
+            "type",
+            "start",
+            "end",
+            "score",
+            "strand",
+            "phase",
+            "attr"
+        ),
+        na        = ".",
+        comment   = "#",
+        col_types = "ccciidcic"
+    )
+}
+
+plot_mRNA <- function(gff,gene,pad=0,gff_extra=NULL,colour_extra="red") {
+    # Plot an mRNA track (mRNA + five_prime_UTR + three_prime_UTR) from gff
+    # for only one mRNA transcript, names "gene"
+    gffsmall <- gff %>%
+        filter(Gene==gene)
+    mRNA_plot <- 
+      ggplot(data=gffsmall,
+           aes(xmin=start,xmax=end)) +
+        # geom_rect(data=filter(gffsmall,type=="mRNA"),
+        #           aes(ymin=-1,ymax=1),fill="darkblue") +
+        geom_rect(data=filter(gffsmall,type=="five_prime_UTR"),
+                  aes(ymin=-4,ymax=4),fill="darkblue") +
+        geom_rect(data=filter(gffsmall,type=="three_prime_UTR"),
+                  aes(ymin=-4,ymax=4),fill="darkblue") +
+        geom_rect(data=filter(gffsmall,type=="CDS"),
+                  aes(ymin=-10,ymax=10),fill="darkblue") +
+        theme_nothing()
+        # theme(axis.text.x = element_text(colour="black"),
+        #       axis.ticks.x=element_line(colour="black",size=0.5))
+    if(!is.null(gff_extra)) {
+        # select location of the mRNA features in gffsmall
+        small_chrom <- gffsmall$chrom[1]
+        small_strand <- gffsmall$strand[1]
+        small_start <- min(gffsmall$start) - pad
+        small_end   <- max(gffsmall$end) + pad
+        # filter gff_extra for only completely overlapping features
+        gff_extrasmall <- filter(gff_extra,
+                                 chrom == small_chrom,
+                                 strand == small_strand,
+                                 start >= small_start,
+                                 end <= small_end)
+        mRNA_plot <- 
+          mRNA_plot + 
+          geom_rect(data=gff_extrasmall,
+                    aes(ymin=-8,ymax=8),fill=colour_extra)
+    }
+    return(mRNA_plot)
+}
+
+# plot_mRNA(gff_H99,"CNAG_06125")
+
+plot_mRNAbg <- function(bgbig,gff,gene,strandrev=FALSE,pad=100,ptitle=NULL,gff_extra=NULL,colour_extra="red") {
+    gffmRNA <- gff %>%
+        filter(Gene==gene)
+    startr <- min(gffmRNA$start) - pad
+    endr   <- max(gffmRNA$end) + pad
+    bgplot <- plot_bg(bgbig,
+                      chromr = gffmRNA$chrom[1],
+                      startr = startr,
+                      endr = endr,
+                      strandrev = strandrev)
+    mplot <- plot_mRNA(gff,gene,pad=pad,
+                       gff_extra=gff_extra,colour_extra=colour_extra) 
+    if (strandrev) {
+        mplot <- mplot + 
+            scale_x_reverse(expand=c(0,0),limits=c(endr,startr))
+    } else {
+        mplot <- mplot + 
+            scale_x_continuous(expand=c(0,0),limits=c(startr,endr)) 
+    }
+    if (is.null(ptitle)) {
+      ptitle <- gene
+    }
+    tplot <- ggdraw() + 
+        draw_label(ptitle,fontface = 'bold',size = 11)
+    plot_grid(tplot,mplot,bgplot,
+              rel_heights = c(0.09,0.05,0.86),
+              ncol=1,align="v",axis="lr")
+}
+
+plot_mRNAbg_pileup <- function(bgbig,gff,pileupSSU, gene,strandrev=FALSE,pad=100,ptitle=NULL,gff_extra=NULL,colour_extra="red") {
+    gffmRNA <- gff %>%
+        filter(Gene==gene)
+    startr <- min(gffmRNA$start) - pad
+    endr   <- max(gffmRNA$end) + pad
+    bgplot <- plot_bg(bgbig,
+                      chromr = gffmRNA$chrom[1],
+                      startr = startr,
+                      endr = endr,
+                      strandrev = strandrev) +
+      theme_nothing()
+    pileup_gene <- filter(pileupSSU, Gene == gene)
+    pileup_max <- max(pileup_gene$pileup)
+    mplot <- plot_mRNA(gff,gene,pad=pad,
+                       gff_extra=gff_extra,colour_extra=colour_extra) 
+    if (strandrev) {
+        mplot <- mplot + 
+            scale_x_reverse(expand=c(0,0),limits=c(endr,startr))
+        warning("pileup_gene is not yet tested if strandrev TRUE")
+        startcodon <- max(filter(gffmRNA,type=="CDS")$end) 
+        bgplot <- bgplot + 
+          geom_line(data = pileup_gene, 
+                    aes(x = startcodon - pos, y = pileup/pileup_max),
+                    colour = "red")
+    } else {
+        mplot <- mplot + 
+            scale_x_continuous(expand=c(0,0),limits=c(startr,endr))
+        startcodon <- min(filter(gffmRNA,type=="CDS")$start) 
+        bgplot <- bgplot + 
+          geom_line(data = pileup_gene, 
+                    aes(x = startcodon + pos, y = pileup/pileup_max),
+                    colour = "red")
+    }
+    if (is.null(ptitle)) {
+      ptitle <- gene
+    }
+    tplot <- ggdraw() + 
+        draw_label(ptitle,fontface = 'bold',size = 11)
+    plot_grid(tplot,bgplot,mplot,
+              rel_heights = c(0.09,0.86,0.05),
+              ncol=1,align="v",axis="lr")
+}
+```
+
+
+
+## Load bedgraphs of Ssd1 CRAC reads
+
+```{r load_bedgraph}
+bedgraph_dir <- "../Ssd1_CRAC_demult_dedup_20190114_all/bedgraph_genomecov/"
+bgall <- bind_rows(
+    read_bedgraph(paste0(bedgraph_dir,"20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30_plus.bedgraph")) %>%
+        mutate(Type="",Sample="A",strand="plus",strandm=1),
+    read_bedgraph(paste0(bedgraph_dir,"20190114_Ssd1_CRAC_trimmed_NNNGTGAGC_SSD1_3_30_minus.bedgraph")) %>%
+        mutate(Type="",Sample="A",strand="minus",strandm=-1),
+    read_bedgraph(paste0(bedgraph_dir,"20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30_plus.bedgraph")) %>%
+        mutate(Type="",Sample="B",strand="plus",strandm=1),
+    read_bedgraph(paste0(bedgraph_dir,"20190114_Ssd1_CRAC_trimmed_NNNTGGAGC_SSD1_4_30_minus.bedgraph")) %>%
+        mutate(Type="",Sample="B",strand="minus",strandm=-1)
+)
+```
+
+
+## Load genome feature file with gene locations
+
+```{r load_gff}
+gff_Sc <- read_gff("../input_annotation/gff_ncRNAs_abundantverifiedmRNAparts.gff") %>%
+  mutate(ID = str_extract(attr,"ID=[A-Za-z0-9-_]+") %>%
+           str_remove("ID="), 
+         Parent = str_extract(attr,"Parent=[A-Za-z0-9-_]+")%>%
+           str_remove("Parent="),
+         Gene = str_extract(Parent,"Y[A-Z0-9-]+"))
+```
+
+## Close-up view of SUN4 and UTH1 5'UTRs
+
+These are helpfully both on the positive strand.
+
+```{r plot_SUN4_close,dependson=c("load_bedgraph","load_gff","plot_functions"),fig.height=6,fig.width=6,units="in"}
+# SUN4 starts 500962, ends 502975, length 2013
+SUN4_A_bg <- 
+  plot_mRNAbg_pileup(bgbig=filter(bgall,Sample %in% c("A"),strand=="plus"),
+           gff=gff_Sc, 
+           pileupSSU = pileups_WTSSU_over20, gene="YNL066W", ptitle="SUN4",pad=100)
+
+
+# UTH1 starts 519320, ends 520858, length 1538
+UTH1_A_bg <- 
+  plot_mRNAbg_pileup(bgbig=filter(bgall,Sample %in% c("A"),strand=="plus"),
+           gff=gff_Sc, 
+           pileupSSU = pileups_WTSSU_over20, gene="YKR042W", ptitle="UTH1",pad=337)
+
+plot_grid(SUN4_A_bg,UTH1_A_bg,
+          ncol = 1)
+
+ggsave("figure/UTRs_SUN4_UTH1_withSSU.pdf", height = 3, width = 4)
+```
+
+This figure argues that ribosomal small subunit (SSU) pauses on the 5'UTR upstream of the Ssd1 peaks.

@@ -260,6 +260,23 @@ ggsave("../figure_out/bedgraph-plot_8genes.pdf",plot_8genes,
        height=6,width=6)
 ```
 
+## Close-up view of SUN4 and UTH1 5'UTRs, for grant prelim. data
+
+```{r plot_SUN4_close,dependson=c("load_bedgraph","load_gff","plot_functions"),fig.height=6,fig.width=6,units="in"}
+
+SUN4_A_bg <- 
+  plot_mRNAbg(bgbig=filter(bgall,Sample %in% c("A"),strand=="plus"),
+           gff=gff_Sc,gene="YNL066W", ptitle="SUN4",pad=200)
+
+UTH1_A_bg <- 
+  plot_mRNAbg(bgbig=filter(bgall,Sample %in% c("A"),strand=="plus"),
+           gff=gff_Sc,gene="YKR042W", ptitle="UTH1",pad=200)
+
+plot_grid(SUN4_A_bg,UTH1_A_bg,
+          ncol = 1)
+
+ggsave("figure/UTRs_SUN4_UTH1_forBBSRCgrant.pdf", height = 3, width = 4)
+```
 
 ## Session Info
 
