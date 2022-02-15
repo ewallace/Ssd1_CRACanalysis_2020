@@ -78,7 +78,7 @@ def collapseDuplicates(inputfile,outputfile):
 	
 def alignReads(inputfile,outputfile,alignfiletype = "SAM"):
 	""" Runs novoalign on all the collapsed files"""
-	cmd = "novoalign -d '%s' -o '%s' -f '%s' -r Random > '%s'" % (args.novoindex,alignfiletype,inputfile,outputfile)
+	cmd = "novoalign -c 1 -d '%s' -o '%s' -f '%s' -r Random > '%s'" % (args.novoindex,alignfiletype,inputfile,outputfile)
 	logger.info(cmd)
 	os.system(cmd)
 
@@ -330,7 +330,7 @@ pipeline.subdivide(task_func = makeGenomeCoverageBedgraph,
 				).follows(pipeline.mkdir(os.path.join(root_dir,"bedgraph_genomecov"))).follows(indexBamFiles)
 
 ### print out flowchart describing pipeline
-pipeline_printout_graph("%s/flowchart.jpg" %root_dir)
+pipeline_printout_graph("%s/flowchart.png" %root_dir)
 
 ### run the pipeline
 pipeline_run(multiprocess=args.processors,verbose=5,checksum_level=3)
